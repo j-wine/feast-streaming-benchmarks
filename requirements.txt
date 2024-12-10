@@ -1,0 +1,7 @@
+feast[apache-flink,postgres,redis,dask]
+dask
+distributed
+dask[dataframe]
+pandas
+requests
+kafka-python
