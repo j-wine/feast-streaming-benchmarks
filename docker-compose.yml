@@ -1,5 +1,4 @@
----
-version: '3'
+version: '3.8'
 services:
   zookeeper:
     image: confluentinc/cp-zookeeper:7.0.1
@@ -13,7 +12,6 @@ services:
     container_name: broker
     ports:
       - "9092:9092"
-      - "29092:29092"
     depends_on:
       - zookeeper
     environment:
@@ -22,8 +20,6 @@ services:
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_INTERNAL:PLAINTEXT
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092,PLAINTEXT_INTERNAL://broker:29092
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
-      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
 
   kafka_producer:
     build:
@@ -46,14 +42,17 @@ services:
       - KAFKA_BROKER=broker:9092
       - FEAST_REPO_PATH=/app/feature_repo
 
+
   flink_job:
     build:
       context: ./streaming/flink
     container_name: flink_job
     depends_on:
       - broker
+      - redis
     environment:
       - KAFKA_BROKER=broker:9092
+      - FLINK_JOB_MANAGER_RPC_ADDRESS=flink
     ports:
       - "8081:8081"
 
@@ -103,15 +102,13 @@ services:
   feature_server:
     container_name: feast_feature_server
     build:
-      context: .
-      dockerfile: feature_repo/Dockerfile
+      context: ./feature_repo
     depends_on:
-      registry:
-        condition: service_healthy
+      - postgres
+      - redis
     ports:
       - "6566:6566"
     links:
-      - redis
       - registry
     healthcheck:
       test: "${DOCKER_HEALTHCHECK_TEST:-curl localhost:6566/health}"
