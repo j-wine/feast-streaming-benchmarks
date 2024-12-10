@@ -1,7 +1,7 @@
 FROM python:3.11-alpine
 
 # Copy app handler code
-COPY ./kafka_producer.py.py kafka_producer.py
+COPY ./kafka_producer.py kafka_producer.py
 COPY feature_repo/data/driver_stats.parquet .
 
 # Install dependencies

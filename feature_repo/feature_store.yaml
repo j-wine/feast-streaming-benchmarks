@@ -10,6 +10,5 @@ online_store:
   connection_string: host.docker.internal:6379
 offline_store:
   type: dask
-  connection_string: "dask-scheduler:8786" # TODO Maybe change to host.docker.internal:8786
 entity_key_serialization_version: 2
 
