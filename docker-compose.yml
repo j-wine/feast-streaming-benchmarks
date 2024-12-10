@@ -25,31 +25,37 @@ services:
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
 
-  kafka_events:
+  kafka_producer:
     build:
-      context: .
-      dockerfile: kafka_demo/Dockerfile
+      context: ./streaming/kafka_producer
+    container_name: kafka_producer
     depends_on:
       - broker
-    container_name: kafka_events
+    environment:
+      - KAFKA_BROKER=broker:9092
 
-  feature_server:
-    container_name: feast_feature_server
+  kafka_consumer:
     build:
-      context: .
-      dockerfile: feature_repo/Dockerfile
+      context: ./streaming
+    container_name: kafka_consumer
     depends_on:
-      registry:
-        condition: service_healthy
-    ports:
-      - "6566:6566"
-    links:
-      - redis
+      - broker
       - registry
-    healthcheck:
-      test: "${DOCKER_HEALTHCHECK_TEST:-curl localhost:6566/health}"
-      interval: "5s"
-      retries: 5
+      - redis
+    environment:
+      - KAFKA_BROKER=broker:9092
+      - FEAST_REPO_PATH=/app/feature_repo
+
+  flink_job:
+    build:
+      context: ./streaming/flink
+    container_name: flink_job
+    depends_on:
+      - broker
+    environment:
+      - KAFKA_BROKER=broker:9092
+    ports:
+      - "8081:8081"
 
   registry:
     container_name: registry
@@ -61,7 +67,7 @@ services:
     ports:
       - "55001:5432"
     volumes:
-      - ./feast-postgres-data:/var/lib/postgresql/data
+      - ./feast-postgres-registry:/var/lib/postgresql/data
       - ./postgresql.conf:/etc/postgresql/postgresql.conf
       - ./pg_hba.conf:/var/lib/postgresql/data/pg_hba.conf
 
@@ -93,3 +99,21 @@ services:
       - dask-scheduler
     links:
       - dask-scheduler
+
+  feature_server:
+    container_name: feast_feature_server
+    build:
+      context: .
+      dockerfile: feature_repo/Dockerfile
+    depends_on:
+      registry:
+        condition: service_healthy
+    ports:
+      - "6566:6566"
+    links:
+      - redis
+      - registry
+    healthcheck:
+      test: "${DOCKER_HEALTHCHECK_TEST:-curl localhost:6566/health}"
+      interval: "5s"
+      retries: 5

@@ -1,12 +1,11 @@
-FROM python:3.8
+FROM python:3.8-slim
 
-RUN pip install "feast[redis,postgres]"
+RUN apt-get update && apt-get install -y build-essential && apt-get clean
 
-COPY feature_repo/feature_store.yaml feature_store.yaml
+COPY ../requirements.txt .
+RUN pip install -r requirements.txt
 
-# Needed to reach online store and registry within Docker network.
-#RUN sed -i 's/localhost:6379/redis:6379/g' feature_store.yaml
-#RUN sed -i 's/127.0.0.1:55001/registry:5432/g' feature_store.yaml
-ENV FEAST_USAGE=False
+COPY . /app
+WORKDIR /app
 
 CMD ["feast", "serve", "-h", "0.0.0.0"]
