@@ -33,21 +33,6 @@ services:
       - broker
     container_name: kafka_events
 
-  push_server:
-    container_name: feast_push_server
-    build:
-      context: .
-      dockerfile: feature_repo/Dockerfile
-    depends_on:
-      feature_server:
-        condition: service_healthy
-      registry:
-        condition: service_healthy
-    ports:
-      - "6567:6566"
-    links:
-      - redis
-
   feature_server:
     container_name: feast_feature_server
     build:
@@ -60,6 +45,7 @@ services:
       - "6566:6566"
     links:
       - redis
+      - registry
     healthcheck:
       test: "${DOCKER_HEALTHCHECK_TEST:-curl localhost:6566/health}"
       interval: "5s"
@@ -73,8 +59,7 @@ services:
       - POSTGRES_PASSWORD=mysecretpassword
       - POSTGRES_DB=feast
     ports:
-      - "55001:5432"  # Expose port 5432 to localhost
-
+      - "55001:5432"
     volumes:
       - ./feast-postgres-data:/var/lib/postgresql/data
       - ./postgresql.conf:/etc/postgresql/postgresql.conf

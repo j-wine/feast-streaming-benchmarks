@@ -1,9 +1,8 @@
-from feast import (
-    Entity,
-)
+from feast import Entity
 
-driver = Entity(
-    name="driver",
-    join_keys=["driver_id"],
-    description="driver id",
+# Define the traffic light entity
+traffic_light = Entity(
+    name="traffic_light_id",
+    join_keys=["traffic_light_id"],
+    description="Unique identifier for each traffic light",
 )

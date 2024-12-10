@@ -5,3 +5,5 @@ dask[dataframe]
 pandas
 requests
 kafka-python
+apache-flink
+pyspark
