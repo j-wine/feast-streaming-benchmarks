@@ -25,12 +25,6 @@ services:
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
 
-  redis:
-    image: redis
-    container_name: redis
-    ports:
-      - "6379:6379"
-
   kafka_events:
     build:
       context: .
@@ -73,7 +67,7 @@ services:
 
   registry:
     container_name: registry
-    image: postgres:10.5
+    image: postgres:17-alpine
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=mysecretpassword
@@ -91,3 +85,26 @@ services:
       test: ["CMD", "pg_isready", "-U", "postgres"]
       interval: 5s
       retries: 5
+
+  redis:
+    image: redis
+    container_name: redis
+    ports:
+      - "6379:6379"
+
+  dask-scheduler:
+    image: ghcr.io/dask/dask:latest
+    container_name: dask-scheduler
+    command: dask-scheduler
+    ports:
+      - "8786:8786"
+      - "8787:8787"
+
+  dask-worker:
+    image: ghcr.io/dask/dask:latest
+    container_name: dask-worker
+    command: dask-worker dask-scheduler:8786
+    depends_on:
+      - dask-scheduler
+    links:
+      - dask-scheduler
