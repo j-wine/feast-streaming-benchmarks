@@ -2,6 +2,17 @@
 Alternative method of persisting from a stream feature view to the way shown in
 kafka_consumer.py
 This method only works in mode Spark on a KafkaSource.
+The preprocess_fn is an optional function that can be provided to the stream processor.
+It serves as an initial step to preprocess the raw data before any transformations
+defined in the stream_feature_view are applied. This function is particularly useful for
+tasks such as data cleaning, parsing, or preliminary transformations that prepare the data for subsequent processing.
+
+The data flow is:
+kafak_producer writes raw data
+every 30 seconds (processing_time) spark processor triggers:
+    I. preprocess_fn triggers to do pre-transformations
+    II. stream_feature_view
+ingest_stream_feature_view
 See docs of @get_stream_processor_object
     Returns a stream processor object based on the config.
 
@@ -63,11 +74,10 @@ time_feature_view = store.get_stream_feature_view("traffic_light_features_stream
 processor = get_stream_processor_object(
     config=ingestion_config,
     fs=store,
-    sfv=time_feature_view  # traffic_light_features_stream
-    ,
+    sfv=time_feature_view,
     preprocess_fn=preprocess_fn
 )
-
+# @BA triggers feature view transformations on write
 query = processor.ingest_stream_feature_view(push_mode=PushMode.ONLINE_AND_OFFLINE)
 
 processor.await_termination()

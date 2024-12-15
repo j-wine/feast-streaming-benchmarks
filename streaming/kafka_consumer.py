@@ -62,6 +62,7 @@ def persist_to_feast_and_batch(message):
     }])
 
     # Persist the DataFrame to the Feast online store
+    # !doesnt trigger the feature views registered transformations !
     store.write_to_online_store(feature_view_name="traffic_light_features", df=df)
     print(f"Persisted data to Feast:\n{df}")
 
