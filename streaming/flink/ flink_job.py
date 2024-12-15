@@ -4,10 +4,8 @@ from pyflink.datastream.connectors.kafka import FlinkKafkaProducer, FlinkKafkaCo
 import json
 from datetime import datetime
 
-# Define Flink environment
 env = StreamExecutionEnvironment.get_execution_environment()
 
-# Kafka consumer
 kafka_consumer = FlinkKafkaConsumer(
     topics="traffic_light_signals",
     deserialization_schema=SimpleStringSchema(),
@@ -38,12 +36,10 @@ def transform_signal(data):
     signal_duration = current_timestamp - last_timestamp
     last_signal_timestamps[traffic_light_id] = current_timestamp
 
-    # Add computed feature
     data["signal_duration"] = signal_duration
     return json.dumps(data)
 
 
-# Transform Kafka stream
 kafka_stream = env.add_source(kafka_consumer).map(transform_signal)
 kafka_stream.add_sink(kafka_producer)
 

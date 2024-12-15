@@ -1,8 +1,8 @@
 FROM python:3.11-alpine
 
 # Copy app handler code
-COPY ./kafka_producer.py kafka_producer.py
-COPY feature_repo/data/driver_stats.parquet .
+COPY ./streaming/kafka_producer/kafka_producer.py kafka_producer.py
+COPY ./feature_repo/data/traffic_light_data.parquet .
 
 # Install dependencies
 RUN pip install kafka

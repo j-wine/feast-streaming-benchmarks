@@ -23,7 +23,8 @@ services:
 
   kafka_producer:
     build:
-      context: ./streaming/kafka_producer
+      context: .
+      dockerfile: ./streaming/kafka_producer/Dockerfile
     container_name: kafka_producer
     depends_on:
       - broker
