@@ -3,7 +3,7 @@ from time import sleep
 from kafka import KafkaProducer
 
 KAFKA_TOPIC = "traffic_light_signals"
-KAFKA_BROKER = "localhost:9092"
+KAFKA_BROKER = "broker:9092"
 
 
 def generate_traffic_light_data():

@@ -2,14 +2,15 @@ from datetime import timedelta
 from feast import Field
 from feast.stream_feature_view import stream_feature_view
 from feast.types import Int64, String, Float32
-from feature_repo.data_sources import traffic_light_stream_source
-from feature_repo.entities import traffic_light
+from pyspark.sql import DataFrame
+from data_sources import traffic_light_stream_source
+from entities import traffic_light
 
 
 @stream_feature_view(
     entities=[traffic_light],
     ttl=timedelta(days=1),
-    mode="spark",           # apparently spark is currently the only support "mode"
+    mode="spark",  # apparently spark is currently the only support "mode"
     schema=[
         Field(name="primary_signal", dtype=Int64),
         Field(name="secondary_signal", dtype=Int64),
@@ -20,7 +21,7 @@ from feature_repo.entities import traffic_light
     online=True,
     source=traffic_light_stream_source,
 )
-def traffic_light_features_stream(df):
+def traffic_light_features_stream(df: DataFrame):
     """
     Placeholder transformation function for external stream processing.
     The actual processing is handled by Flink/Kafka jobs.

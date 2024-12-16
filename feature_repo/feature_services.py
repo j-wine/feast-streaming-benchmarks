@@ -1,6 +1,6 @@
 from feast import FeatureService
 
-from feature_repo.traffic_light_features import traffic_light_features_stream
+from traffic_light_features import traffic_light_features_stream
 
 # Define a FeatureService for the traffic light model
 traffic_light_service = FeatureService(
