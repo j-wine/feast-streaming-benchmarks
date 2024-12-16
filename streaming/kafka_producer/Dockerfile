@@ -1,11 +1,13 @@
 FROM python:3.11
 
-RUN apk add --no-cache \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
-    musl-dev \
+    libc-dev \
     libffi-dev \
     python3-dev \
-    py3-pip
+    python3-pip && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
 RUN pip install --upgrade pip
 RUN pip install --upgrade --no-cache-dir kafka-python==2.0.2 six

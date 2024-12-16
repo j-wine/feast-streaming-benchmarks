@@ -9,7 +9,7 @@ KAFKA_BROKER = "broker:9092"
 BATCH_SOURCE_PATH = "../offline_data/traffic_light_data.parquet"
 
 # Initialize the Feast feature store
-store = FeatureStore(repo_path="../feature_repo")
+store = FeatureStore(repo_path="./")
 
 # Cache for last signal timestamps
 last_signal_timestamps = {}
