@@ -1,13 +1,19 @@
-FROM python:3.11-alpine
+FROM python:3.11
 
-# Copy app handler code
-COPY ./streaming/kafka_producer/kafka_producer.py kafka_producer.py
-COPY ./feature_repo/data/traffic_light_data.parquet .
+RUN apk add --no-cache \
+    gcc \
+    musl-dev \
+    libffi-dev \
+    python3-dev \
+    py3-pip
 
-# Install dependencies
-RUN pip install kafka
+RUN pip install --upgrade pip
+RUN pip install --upgrade --no-cache-dir kafka-python==2.0.2 six
+
+# Copy the producer code and data
+COPY ./streaming/kafka_producer/kafka_producer.py /app/
+COPY ./feature_repo/data/traffic_light_data.parquet /app/
+
+WORKDIR /app
 
 CMD ["python", "kafka_producer.py"]
-
-# TODO set up  topics
-# CMD [ "python", "-u", "kafka_producer.py", "--mode", "setup", "--bootstrap_servers", "broker:29092"]
