@@ -1,8 +1,8 @@
 import json
+
 import pandas as pd
-from datetime import datetime
-from kafka import KafkaConsumer
 from feast import FeatureStore
+from kafka import KafkaConsumer
 
 KAFKA_TOPIC = "processed_traffic_light_signals"
 KAFKA_BROKER = "broker:9092"

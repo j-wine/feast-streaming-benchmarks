@@ -46,7 +46,7 @@ services:
 
   flink_job:
     build:
-      context: ./streaming/flink
+      context: ./streaming/transformer
     container_name: flink_job
     depends_on:
       - broker
@@ -67,11 +67,18 @@ services:
     ports:
       - "55001:5432"
     volumes:
+      # Separate data and configuration volumes
       - ./feast-postgres-registry:/var/lib/postgresql/data
       - ./postgresql.conf:/etc/postgresql/postgresql.conf
-      - ./pg_hba.conf:/var/lib/postgresql/data/pg_hba.conf
+      - ./pg_hba.conf:/etc/postgresql/pg_hba.conf
 
-    command: postgres -c 'config_file=/etc/postgresql/postgresql.conf' -c listen_addresses='*'  -c max_connections=200
+    command: >
+      postgres
+      -c config_file=/etc/postgresql/postgresql.conf
+      -c hba_file=/etc/postgresql/pg_hba.conf
+      -c listen_addresses='*'
+      -c max_connections=200
+
     healthcheck:
       test: ["CMD", "pg_isready", "-U", "postgres"]
       interval: 5s

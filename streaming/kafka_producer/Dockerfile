@@ -7,7 +7,7 @@ COPY ./feature_repo/data/traffic_light_data.parquet .
 # Install dependencies
 RUN pip install kafka
 
-CMD ["python", "kafka_consumer.py"]
+CMD ["python", "kafka_producer.py"]
 
 # TODO set up  topics
 # CMD [ "python", "-u", "kafka_producer.py", "--mode", "setup", "--bootstrap_servers", "broker:29092"]

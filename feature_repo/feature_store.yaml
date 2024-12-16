@@ -2,9 +2,7 @@ project: feast_demo_local
 provider: local
 registry:
   registry_type: sql
-  path: postgresql://postgres:mysecretpassword@host.docker.internal:55001/feast
-
-
+  path: postgresql+psycopg://postgres:mysecretpassword@host.docker.internal:55001/feast
 online_store:
   type: redis
   connection_string: host.docker.internal:6379
