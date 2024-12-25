@@ -17,5 +17,5 @@ COPY ./streaming/kafka_producer/kafka_producer.py /app/
 COPY ./feature_repo/data/traffic_light_data.parquet /app/
 
 WORKDIR /app
-
-CMD ["python", "kafka_producer.py"]
+# wait for kafka broker
+CMD ["sh", "-c", "sleep 10 && python kafka_producer.py"]

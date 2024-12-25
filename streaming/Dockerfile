@@ -15,5 +15,5 @@ RUN pip install --upgrade --no-cache-dir kafka-python-ng==2.2.3 feast[postgres,r
 COPY kafka_consumer.py /app/
 COPY feature_store.yaml /app/
 WORKDIR /app
-
-CMD ["python", "kafka_consumer.py"]
+# wait for kafka broker
+CMD ["sh", "-c", "sleep 10 && python kafka_consumer.py"]

@@ -68,7 +68,6 @@ ingestion_config = SparkProcessorConfig(
 )
 
 time_feature_view = store.get_stream_feature_view("traffic_light_features_stream")
-
 # from feature_repo.traffic_light_features import traffic_light_features_stream
 
 processor = get_stream_processor_object(
