@@ -1,4 +1,4 @@
-FROM python:3.13
+FROM python:3.11
 
 RUN apt-get update && apt-get install -y \
     cmake \
@@ -6,7 +6,6 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 COPY ./requirements.txt requirements.txt
-RUN pip install -r requirements.txt
 
 RUN pip install --upgrade pip \
     && pip install pyarrow apache-beam \
