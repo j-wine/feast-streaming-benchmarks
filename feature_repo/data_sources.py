@@ -14,7 +14,7 @@ traffic_light_stream_source = KafkaSource(
     name="traffic_light_stream_source",
     kafka_bootstrap_servers="broker:9092",
     topic="processed_traffic_light_signals",
-    timestamp_field="timestamp",
+    timestamp_field="event_timestamp",
     batch_source=traffic_light_batch_source,
     message_format=JsonFormat(
         schema_json="""
@@ -22,12 +22,12 @@ traffic_light_stream_source = KafkaSource(
             "type": "record",
             "name": "TrafficLightSignal",
             "fields": [
-                {"name": "traffic_light_id", "type": "string"},
+                {"name": "traffic_light_id", "type": "int"},
                 {"name": "primary_signal", "type": "int"},
                 {"name": "secondary_signal", "type": "int"},
                 {"name": "location", "type": "string"},
-                {"name": "signal_duration", "type": "float"},
-                {"name": "timestamp", "type": "string"}
+                {"name": "signal_duration", "type": "double"},
+                {"name": "event_timestamp", "type": "string"}
             ]
         }
         """

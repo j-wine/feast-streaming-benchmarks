@@ -9,7 +9,7 @@ KAFKA_BROKER = "broker:9092"
 def generate_traffic_light_data():
     # Simulated data
     return {
-        "traffic_light_id": "1556",
+        "traffic_light_id": 1556,
         "primary_signal": 3,  # Green
         "secondary_signal": 1,  # Red
         "location": "Dammtor/Theodor-Heuss-Platz",
