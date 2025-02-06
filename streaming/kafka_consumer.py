@@ -1,8 +1,10 @@
 import json
+import logging
 
 import pandas as pd
 from feast import FeatureStore
 from kafka import KafkaConsumer
+logger = logging.getLogger('kafka_consumer')
 
 KAFKA_TOPIC = "processed_traffic_light_signals"
 KAFKA_BROKER = "broker:9092"
@@ -62,19 +64,24 @@ def persist_to_feast_and_batch(message):
     }])
 
     # Persist the DataFrame to the Feast online store
-
+    # For debugging Shows all registered feature views
+    logger.log(level=20, msg=store.list_feature_views())
     # @BA !doesnt trigger the feature views registered transformations !
-    store.write_to_online_store(feature_view_name="traffic_light_features", df=df)
+    # feature_view_name uses the name of the feature view as string
+    # for decorator tag @stream_feature_view the name is the method name
+    store.write_to_online_store(feature_view_name="traffic_light_features_stream", df=df)
     print(f"Persisted data to Feast:\n{df}")
 
     # Append the data to the batch source for historical storage
     df.to_parquet(BATCH_SOURCE_PATH, mode="a", index=False)
+    # @BA @TODO test in comparison to write_to_offline_store
+    # store.write_to_offline_store(feature_view_name="traffic_light_features_stream", df=df)
     print(f"Written to batch source:\n{df}")
 
 
 def consume_kafka_messages():
     """
-    Consumes messages from Kafka and persists them to Feast and batch source.
+    Consumes messages from Kafka and persists them to Feast online store and batch source(=offline store)
     """
     consumer = KafkaConsumer(
         KAFKA_TOPIC,
