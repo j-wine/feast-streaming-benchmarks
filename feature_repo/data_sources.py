@@ -22,7 +22,7 @@ traffic_light_stream_source = KafkaSource(
             "type": "record",
             "name": "TrafficLightSignal",
             "fields": [
-                {"name": "traffic_light_id", "type": "int"},
+                {"name": "traffic_light_id", "type": "string"},
                 {"name": "primary_signal", "type": "int"},
                 {"name": "secondary_signal", "type": "int"},
                 {"name": "location", "type": "string"},
