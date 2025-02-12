@@ -8,9 +8,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
+COPY requirements.txt requirements.txt
+
 RUN pip install --upgrade pip
 RUN pip install --upgrade dill
-RUN pip install --upgrade --no-cache-dir kafka-python-ng feast[postgres,redis,dask] pandas pyarrow psutil
+RUN pip install -r requirements.txt
 
 COPY kafka_consumer.py /app/
 COPY feature_store.yaml /app/
