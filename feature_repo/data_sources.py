@@ -1,5 +1,5 @@
 from datetime import timedelta
-from feast import KafkaSource, FileSource
+from feast import KafkaSource, FileSource, PushSource
 from feast.data_format import JsonFormat
 
 # Batch source for historical feature retrieval
@@ -8,6 +8,12 @@ traffic_light_batch_source = FileSource(
     path="offline_data/traffic_light_data.parquet",
     timestamp_field="event_timestamp",
 )
+
+push_source = PushSource(
+    name="push_source",
+    batch_source=traffic_light_batch_source
+)
+
 
 # Kafka source for streaming data
 traffic_light_stream_source = KafkaSource(
