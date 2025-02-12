@@ -1,25 +1,40 @@
 services:
-  zookeeper:
-    image: confluentinc/cp-zookeeper:7.0.1
-    container_name: zookeeper
-    environment:
-      ZOOKEEPER_CLIENT_PORT: 2181
-      ZOOKEEPER_TICK_TIME: 2000
+  feature_server:
+    container_name: feature_server
+    build:
+      context: ./feature_repo
+    volumes:
+      - ./feature_repo:/app/feature_repo
+      - ./feature_repo/offline_data:/app/offline_data  # ✅ Mounts `offline_data` directly inside `/app/`
 
-  broker:
-    image: confluentinc/cp-kafka:7.0.1
-    container_name: broker
-    ports:
-      - "9092:9092"
     depends_on:
-      - zookeeper
+      - registry
+      - redis
+      - dask-worker
+    ports:
+      - "6566:6566"
+    links:
+      - registry
+    healthcheck:
+      test: "${DOCKER_HEALTHCHECK_TEST:-curl localhost:6566/health}"
+      interval: "5s"
+      retries: 5
+
+  kafka_consumer:
+    build:
+      context: ./streaming
+    volumes:
+     # - ./feature_repo:/app/feature_repo
+      - ./feature_repo/offline_data:/app/offline_data  # ✅ Mounts `offline_data` directly inside `/app/`
+
+    container_name: kafka_consumer
+    depends_on:
+      - broker
+      - registry
+      - redis
     environment:
-      KAFKA_BROKER_ID: 1
-      KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_INTERNAL:PLAINTEXT
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://broker:9092,PLAINTEXT_INTERNAL://broker:29092
-      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,PLAINTEXT_INTERNAL://0.0.0.0:29092
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      - KAFKA_BROKER=broker:9092
+      - FEAST_REPO_PATH=/app/feature_repo
 
   kafka_producer:
     build:
@@ -30,20 +45,6 @@ services:
       - broker
     environment:
       - KAFKA_BROKER=broker:9092
-
-  kafka_consumer:
-    build:
-      context: ./streaming
-    volumes:
-      - ./feature_repo:/app/feature_repo
-    container_name: kafka_consumer
-    depends_on:
-      - broker
-      - registry
-      - redis
-    environment:
-      - KAFKA_BROKER=broker:9092
-      - FEAST_REPO_PATH=/app/feature_repo
 
   registry:
     container_name: registry
@@ -95,21 +96,24 @@ services:
     links:
       - dask-scheduler
 
-  feature_server:
-    container_name: feast_feature_server
-    build:
-      context: ./feature_repo
-    volumes:
-      - ./feature_repo:/app/feature_repo
-    depends_on:
-      - registry
-      - redis
-      - dask-worker
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.0.1
+    container_name: zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+
+  broker:
+    image: confluentinc/cp-kafka:7.0.1
+    container_name: broker
     ports:
-      - "6566:6566"
-    links:
-      - registry
-    healthcheck:
-      test: "${DOCKER_HEALTHCHECK_TEST:-curl localhost:6566/health}"
-      interval: "5s"
-      retries: 5
+      - "9092:9092"
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_INTERNAL:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://broker:9092,PLAINTEXT_INTERNAL://broker:29092
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,PLAINTEXT_INTERNAL://0.0.0.0:29092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
