@@ -8,7 +8,8 @@ from feast.stream_feature_view import stream_feature_view
 from feast.types import Int64, String, Float32, Float64
 from pyspark.sql import DataFrame
 
-from data_sources import traffic_light_stream_source, traffic_light_batch_source, push_source
+from data_sources import traffic_light_stream_source, traffic_light_batch_source, push_source, \
+    traffic_lights_request_source
 from entities import traffic_light
 logger = logging.getLogger('traffic_light_features')
 
@@ -50,10 +51,26 @@ traffic_light_pushed_features = FeatureView(
     owner="test1@gmail.com",
 )
 
+@on_demand_feature_view(
+    sources=[traffic_lights_request_source],
+    # singleton is only applicable when mode="python"
+    singleton=False,
+    description="traffic light features for transformation on read time",
+    mode="pandas",
+    write_to_online_store=True,
+    entities=[traffic_light],
+    schema = [Field(name="signal_duration_minutes", dtype=Float64)]
+)
+def on_demand_read_time_transformed_features(features_df: pd.DataFrame) -> pd.DataFrame:
+    df = pd.DataFrame()
+    df["signal_duration_minutes"] = features_df["signal_duration"] / 60
+    print("read time on demand transformation signal_duration_minutes", df["signal_duration_minutes"])
+    return df
 
 
 @on_demand_feature_view(
     sources=[traffic_light_pushed_features],
+    entities=[traffic_light],
     schema=[
         Field(name="signal_duration_minutes", dtype=Float64),
     ],
