@@ -85,10 +85,12 @@ def persist_to_feast_and_batch(message):
         ],   entity_rows=entity_rows   ).to_df()
     print("traffic_light_stats after write_to_online_store,before push:\n", online_df)
     # @BA use on-demand feature view to do transformation on read
+    on_demand_entity_rows = online_df.rename(columns={"signal_duration": "signal_duration"}).to_dict(orient="records")
+
     online_df = store.get_online_features(
         features=[
             "on_demand_read_time_transformed_features:signal_duration_minutes"
-        ],   entity_rows=entity_rows   ).to_df()
+        ],   entity_rows=on_demand_entity_rows   ).to_df()
     #@BA
     print("on demand on read transf:before write on_demand_read_time_transformed_features:signal_duration_minutes \n", online_df)
 
