@@ -7,6 +7,6 @@ pyarrow<18.1.0
 requests==2.31.0
 pyspark==3.3.2
 kafka-python-ng
-feast[postgres,redis,dask]
+feast[postgres,redis,dask]==0.45.0
 pyspark
 python-dateutil
