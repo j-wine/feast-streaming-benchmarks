@@ -5,7 +5,7 @@ import pandas as pd
 from feast import Field, FeatureView
 from feast.on_demand_feature_view import on_demand_feature_view
 from feast.stream_feature_view import stream_feature_view
-from feast.types import Int64, String, Float32, Float64
+from feast.types import Int64, String, Float64
 from pyspark.sql import DataFrame
 
 from data_sources import traffic_light_stream_source, traffic_light_batch_source, push_source, \
@@ -47,8 +47,6 @@ traffic_light_pushed_features = FeatureView(
     ],
     online=True,
     source=push_source,
-    tags={"production": "True"},
-    owner="test1@gmail.com",
 )
 
 @on_demand_feature_view(
@@ -96,12 +94,16 @@ def traffic_light_transformed_features(features_df: pd.DataFrame) -> pd.DataFram
     source=traffic_light_stream_source,
 )
 def traffic_light_features_stream(df: DataFrame):
+    # !@BA imports have to be inside the function to serialize it !    """
+
     from pyspark.sql.functions import col
     """
-    Placeholder transformation function for external stream processing.
-    The actual processing is handled by Flink/Kafka jobs.
+    The transformation in method body is called when writing to the store via the view.
+    The input pyspark.sql.dataframe can be transformed with spark.
+    @BA More complex transformations should be done with an ingestion config using spark.
 
-    ! imports have to be inside the function to serialize it !
-    """
     logger.log(level=logging.INFO, msg=f"in transformation of traffic_light_features_stream")
+    """
+    # logs or prints here somehow arent visible in container log but the transformation does get triggered on store.push
+    print("in transformation of traffic_light_features_stream")
     return df.withColumn("signal_duration_minutes", col("signal_duration") / 60)

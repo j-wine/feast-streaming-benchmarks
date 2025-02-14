@@ -126,7 +126,26 @@ def persist_to_feast_and_batch(message):
     # store.write_to_online_store(feature_view_name="traffic_light_features_stream", df=df)
 
     # @BA push without transformation and then retrieve the transformed feature using the stream feature view
-    # @BA does the feature views transf get triggered?
+    # @BA does the feature views transformation get triggered?
+    # yes, see the log. the signal_duration_minutes was set at 0.0 before store.push
+    # is this a default value ?
+    """
+    2025-02-13 13:18:49 pre push traffic_light_transformed_features:signal_duration_minutes 
+    2025-02-13 13:18:49    traffic_light_id  signal_duration_minutes
+    2025-02-13 13:18:49 0              320                      0.0
+    2025-02-13 13:18:49 1              321                      0.0
+    2025-02-13 13:18:49 2              333                      0.0
+    2025-02-13 13:18:49 3              370                      0.0
+    2025-02-13 13:18:49 4               99                      0.0
+    2025-02-13 13:18:49 pushed to push_source
+    2025-02-13 13:18:49 post push traffic_light_features_stream:signal_duration_minutes:
+    2025-02-13 13:18:49    traffic_light_id  signal_duration_minutes
+    2025-02-13 13:18:49 0              320                83.732365
+    2025-02-13 13:18:49 1              321                83.732383
+    2025-02-13 13:18:49 2              333                83.732681
+    2025-02-13 13:18:49 3              370                83.732723
+    2025-02-13 13:18:49 4               99               598.122701
+    """
     store.push("push_source",df)
     print("pushed to push_source")
     online_df = store.get_online_features(
