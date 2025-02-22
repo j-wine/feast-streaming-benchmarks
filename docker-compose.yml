@@ -36,6 +36,18 @@ services:
       - KAFKA_BROKER=broker:9092
       - FEAST_REPO_PATH=/app/feature_repo
 
+  spark_ingestor:
+    build:
+      context: ./streaming/spark_processor
+      dockerfile: ./Dockerfile
+    volumes:
+      - ./feature_repo/offline_data:/app/offline_data  # Mounts `offline_data` directly inside `/app/`
+    container_name: spark_ingestor
+    depends_on:
+      - broker
+      - registry
+      - redis
+
   kafka_producer:
     build:
       context: .
