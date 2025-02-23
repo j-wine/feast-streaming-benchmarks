@@ -17,6 +17,7 @@ os.environ["PYSPARK_SUBMIT_ARGS"] = "--packages org.apache.spark:spark-sql-kafka
 spark = SparkSession.builder \
     .appName("KafkaTrafficLightProcessor") \
     .config("spark.sql.shuffle.partitions", 5) \
+    .config("spark.sql.execution.arrow.pyspark.enabled", "true") \
     .getOrCreate()
 
 # Verify Spark setup
@@ -27,6 +28,12 @@ store = FeatureStore()
 
 def preprocess_fn(rows: pd.DataFrame):
     """Preprocess function to log Spark DataFrame details."""
+    print("start preprocess_fn")
+    # Ensure timestamp is in the correct format
+    # Convert `event_timestamp` from ISO 8601 (with timezone) to UTC format
+    rows["event_timestamp"] = pd.to_datetime(rows["event_timestamp"], errors="coerce")\
+        .dt.tz_localize(None).astype("datetime64[ns]")
+
     print(f"df columns: {rows.columns}")
     print(f"df size: {rows.shape[0]}")
     print(f"df preview:\n{rows.head()}")
@@ -49,8 +56,9 @@ processor = get_stream_processor_object(
     config=ingestion_config,
     fs=store,
     sfv=traffic_light_windowed_features,
-    preprocess_fn=preprocess_fn
+    # preprocess_fn=preprocess_fn
 )
+
 
 # Start ingestion job (process stream data every 30 seconds)
 query = processor.ingest_stream_feature_view(to=PushMode.ONLINE)
