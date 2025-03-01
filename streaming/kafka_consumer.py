@@ -40,9 +40,9 @@ def persist_to_feast_and_batch(message):
     traffic_light_id = data["traffic_light_id"]
 
     # entity id's to fetch
+    # Construct entity rows for the previous 5 IDs and the current one, only if ID > 0
     entity_rows = [
-        {"traffic_light_id": "320"}, {"traffic_light_id": "321"}, {"traffic_light_id": "333"},
-                   {"traffic_light_id": "370"}, {"traffic_light_id": traffic_light_id}
+        {"traffic_light_id": str(i)} for i in range(max(1, traffic_light_id - 5), traffic_light_id + 1)
     ]
     # Use Feast's event timestamp for processing
 
