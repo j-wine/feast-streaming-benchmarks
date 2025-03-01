@@ -1,5 +1,5 @@
 # Use the official Python 3.10 image
-FROM python:3.10
+FROM python:3.10.11
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1
@@ -13,9 +13,6 @@ RUN apt-get update && \
 RUN export JAVA_HOME=$(dirname $(dirname $(readlink -f $(which javac)))) && \
     echo "export JAVA_HOME=$JAVA_HOME" >> /etc/environment && \
     echo "export PATH=$JAVA_HOME/bin:$PATH" >> /etc/environment
-
-# Install PySpark version 3.3.2
-RUN pip install --no-cache-dir pyspark==3.3.2
 
 WORKDIR /app
 # Copy requirements first
