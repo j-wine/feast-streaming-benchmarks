@@ -29,14 +29,6 @@ store = FeatureStore()
 def preprocess_fn(rows: pd.DataFrame):
     """Preprocess function to log Spark DataFrame details."""
     print("start preprocess_fn")
-    # Ensure timestamp is in the correct format
-    # Convert `event_timestamp` from ISO 8601 (with timezone) to UTC format
-    rows["event_timestamp"] = pd.to_datetime(rows["event_timestamp"], errors="coerce")\
-        .dt.tz_localize(None).astype("datetime64[ns]")
-
-    print(f"df columns: {rows.columns}")
-    print(f"df size: {rows.shape[0]}")
-    print(f"df preview:\n{rows.head()}")
     return rows
 
 # Configure Spark ingestion job
@@ -56,29 +48,12 @@ processor = get_stream_processor_object(
     config=ingestion_config,
     fs=store,
     sfv=traffic_light_windowed_features,
-    # preprocess_fn=preprocess_fn
+    preprocess_fn=preprocess_fn
 )
 
 
 # Start ingestion job (process stream data every 30 seconds)
 query = processor.ingest_stream_feature_view(to=PushMode.ONLINE)
 
-# Wait for stream termination (optional)
-processor.await_termination()
 
-# Stop query safely when done
-query.stop()
-
-# Fetch online features for a specific entity
-entity_rows = [{"traffic_light_id": "320"}]
-online_features = store.get_online_features(
-    features=[
-        "traffic_light_windowed_features:avg_signal_duration_minutes",
-        "traffic_light_windowed_features:primary_signal_count",
-        "traffic_light_windowed_features:secondary_signal_count",
-        "traffic_light_windowed_features:total_windowed_primary_signal_duration",
-        "traffic_light_windowed_features:total_windowed_secondary_signal_duration",
-    ],
-    entity_rows=entity_rows
-).to_dict()
-print("traffic_light_windowed_features:", online_features)
+query.awaitTermination()  # Ensure the script does not exit
