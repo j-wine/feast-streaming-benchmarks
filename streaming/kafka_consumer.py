@@ -73,7 +73,7 @@ def persist_to_feast_and_batch(message):
 
     }])
     store.write_to_online_store(feature_view_name="traffic_light_stats", df=df)
-    print("store.write_to_online_store(feature_view_name=""traffic_light_stats"", df=df)")
+    print("store.write_to_online_store(feature_view_name=""traffic_light_stats"", df=, )", df)
 
     online_df = store.get_online_features(
         features=[
@@ -91,7 +91,7 @@ def persist_to_feast_and_batch(message):
             "on_demand_read_time_transformed_features:signal_duration_minutes"
         ],   entity_rows=on_demand_entity_rows   ).to_df()
     #@BA
-    print("on demand on read transf:before write on_demand_read_time_transformed_features:signal_duration_minutes \n", online_df)
+    print("before write on_demand_read_time_transformed_features:signal_duration_minutes \n", online_df)
 
     online_df = store.get_online_features(
         features=["traffic_light_features_stream:signal_duration_minutes"],
@@ -175,31 +175,16 @@ def persist_to_feast_and_batch(message):
 
 
     # @BA !doesnt trigger the feature views registered transformations !
-    # only store is flexible, so the new feature signal_duration_minutes can be set!
-
-    print(f"Persisted data to Feast:\n{df}")
-
-
-
-    # Persist the DataFrame to the Feast online store
-    # For debugging Shows all registered feature views
-    logger.log(level=20, msg=store.list_feature_views())
-    # @BA !doesnt trigger the feature views registered transformations !
-    # feature_view_name uses the name of the feature view as string
-    # for decorator tag @stream_feature_view the name is the method name
-
-
-
     online_df = store.get_online_features(
         features=[
             "traffic_light_features_stream:signal_duration_minutes"
 
         ], entity_rows=entity_rows).to_df()
-    print("online_df traffic_light_features_stream:signal_duration_minutes \n", online_df)
+    print("post push online_df traffic_light_features_stream:signal_duration_minutes \n", online_df)
 
 
     # need different feature view as offline store doesnt know
-    # about the only feature in the feature viewmwhich is signal_duration_minutes
+    # about the only feature in the feature view which is signal_duration_minutes
     # training_df = store.get_historical_features(
     #     entity_df=entity_df,
     #     features=[
