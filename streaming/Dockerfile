@@ -14,6 +14,8 @@ RUN pip install --upgrade pip
 RUN pip install --upgrade dill
 RUN pip install -r requirements.txt
 
+ENV PYTHONWARNINGS="ignore"
+
 COPY kafka_consumer.py /app/
 COPY feature_store.yaml /app/
 WORKDIR /app

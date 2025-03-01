@@ -3,7 +3,7 @@ FROM python:3.10.11
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1
-
+ENV PYTHONWARNINGS="ignore"
 # Install Java (default-jdk installs OpenJDK 17)
 RUN apt-get update && \
     apt-get install -y default-jdk && \
