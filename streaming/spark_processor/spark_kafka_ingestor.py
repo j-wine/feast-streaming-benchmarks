@@ -11,7 +11,7 @@ JAVA_HOME = os.getenv("JAVA_HOME")
 SPARK_HOME = os.getenv("SPARK_HOME")
 
 # Ensure PySpark is properly configured with Kafka support
-os.environ["PYSPARK_SUBMIT_ARGS"] = "--packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.3.2 pyspark-shell"
+os.environ["PYSPARK_SUBMIT_ARGS"] = "--packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.0 pyspark-shell"
 
 # Initialize Spark Session
 spark = SparkSession.builder \
