@@ -1,5 +1,7 @@
 import json
 import logging
+import time
+
 from dateutil import parser
 
 import pandas as pd
@@ -37,14 +39,11 @@ def persist_to_feast_and_batch(message):
     """
     # Deserialize the Kafka message
     data = json.loads(message.value.decode("utf-8"))
-    traffic_light_id = data["traffic_light_id"]
-
-    # entity id's to fetch
-    # Construct entity rows for the previous 5 IDs and the current one, only if ID > 0
+    traffic_light_id = int(data["traffic_light_id"])  # Convert to integer for calculations
     entity_rows = [
-        {"traffic_light_id": str(i)} for i in range(max(1, traffic_light_id - 5), traffic_light_id + 1)
+        {"traffic_light_id": "1"}, {"traffic_light_id": "2"}, {"traffic_light_id": "3"},
+        {"traffic_light_id": "4"}, {"traffic_light_id": "5"}
     ]
-    # Use Feast's event timestamp for processing
 
     try:
         # Ensure timestamp is correctly parsed with timezone
@@ -154,6 +153,20 @@ def persist_to_feast_and_batch(message):
     ).to_df()
     print("post push traffic_light_features_stream:signal_duration_minutes:\n", online_df)
 
+    # Fetch online features for a specific entity
+    entity_rows = [{"traffic_light_id": "1"}]
+    online_features = store.get_online_features(
+        features=[
+            "traffic_light_windowed_features:avg_signal_duration_minutes",
+            "traffic_light_windowed_features:primary_signal_count",
+            "traffic_light_windowed_features:secondary_signal_count",
+            "traffic_light_windowed_features:total_windowed_primary_signal_duration",
+            "traffic_light_windowed_features:total_windowed_secondary_signal_duration",
+        ],
+        entity_rows=entity_rows
+    ).to_dict()
+    print("post push traffic_light_windowed_features:", online_features)
+
     online_df = store.get_online_features(
         features=[
             "traffic_light_transformed_features:signal_duration_minutes"
@@ -200,6 +213,7 @@ def persist_to_feast_and_batch(message):
     # @BA aso does NOT trigger registered transformation in stream feature view!
     # store.write_to_offline_store(feature_view_name="traffic_light_features_stream", df=df)
     # print(f"Written to batch source:\n{df}")
+
 
 
 def consume_kafka_messages():

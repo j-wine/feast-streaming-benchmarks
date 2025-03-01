@@ -106,7 +106,9 @@ def traffic_light_features_stream(df: DataFrame):
     logger.log(level=logging.INFO, msg=f"in transformation of traffic_light_features_stream")
     """
     # logs or prints here somehow arent visible in container log but the transformation does get triggered on store.push
-    print("in transformation of traffic_light_features_stream")
+    print("in transformation of traffic_light_features_stream, signal duration: ", col("signal_duration"))
+    print("in transformation of traffic_light_features_stream, df: ", df)
+
     return df.withColumn("signal_duration_minutes", col("signal_duration") / 60)
 
 @stream_feature_view(
