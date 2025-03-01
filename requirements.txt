@@ -8,7 +8,7 @@ pyarrow==18.0.0
 pydantic==2.10.6
 requests==2.32.3
 kafka-python==2.0.2
-pyspark==3.3.2
+pyspark==3.5.0
 jsonschema
 distributed==2024.4.1
 dask[dataframe]==2024.4.1

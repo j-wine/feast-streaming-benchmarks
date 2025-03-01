@@ -9,7 +9,7 @@ pydantic==2.10.6
 requests==2.32.3
 kafka-python==2.0.2
 feast[postgres,redis,dask]==0.46.0
-pyspark==3.3.2
+pyspark==3.5.0
 python-dateutil
 distributed==2024.4.1
 dask[dataframe]==2024.4.1
