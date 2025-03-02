@@ -1,5 +1,7 @@
 import json
 import logging
+import time
+
 from dateutil import parser
 
 import pandas as pd
@@ -37,14 +39,11 @@ def persist_to_feast_and_batch(message):
     """
     # Deserialize the Kafka message
     data = json.loads(message.value.decode("utf-8"))
-    traffic_light_id = data["traffic_light_id"]
-
-    # entity id's to fetch
+    traffic_light_id = int(data["traffic_light_id"])  # Convert to integer for calculations
     entity_rows = [
-        {"traffic_light_id": "320"}, {"traffic_light_id": "321"}, {"traffic_light_id": "333"},
-                   {"traffic_light_id": "370"}, {"traffic_light_id": traffic_light_id}
+        {"traffic_light_id": "1"}, {"traffic_light_id": "2"}, {"traffic_light_id": "3"},
+        {"traffic_light_id": "4"}, {"traffic_light_id": "5"}
     ]
-    # Use Feast's event timestamp for processing
 
     try:
         # Ensure timestamp is correctly parsed with timezone
@@ -74,7 +73,7 @@ def persist_to_feast_and_batch(message):
 
     }])
     store.write_to_online_store(feature_view_name="traffic_light_stats", df=df)
-    print("store.write_to_online_store(feature_view_name=""traffic_light_stats"", df=df)")
+    print("store.write_to_online_store(feature_view_name=""traffic_light_stats"", df=, )", df)
 
     online_df = store.get_online_features(
         features=[
@@ -92,7 +91,7 @@ def persist_to_feast_and_batch(message):
             "on_demand_read_time_transformed_features:signal_duration_minutes"
         ],   entity_rows=on_demand_entity_rows   ).to_df()
     #@BA
-    print("on demand on read transf:before write on_demand_read_time_transformed_features:signal_duration_minutes \n", online_df)
+    print("before write on_demand_read_time_transformed_features:signal_duration_minutes \n", online_df)
 
     online_df = store.get_online_features(
         features=["traffic_light_features_stream:signal_duration_minutes"],
@@ -154,6 +153,20 @@ def persist_to_feast_and_batch(message):
     ).to_df()
     print("post push traffic_light_features_stream:signal_duration_minutes:\n", online_df)
 
+    # Fetch online features for a specific entity
+    entity_rows = [{"traffic_light_id": "1"}]
+    online_features = store.get_online_features(
+        features=[
+            "traffic_light_windowed_features:avg_signal_duration_minutes",
+            "traffic_light_windowed_features:primary_signal_count",
+            "traffic_light_windowed_features:secondary_signal_count",
+            "traffic_light_windowed_features:total_windowed_primary_signal_duration",
+            "traffic_light_windowed_features:total_windowed_secondary_signal_duration",
+        ],
+        entity_rows=entity_rows
+    ).to_dict()
+    print("post push traffic_light_windowed_features:", online_features)
+
     online_df = store.get_online_features(
         features=[
             "traffic_light_transformed_features:signal_duration_minutes"
@@ -162,31 +175,16 @@ def persist_to_feast_and_batch(message):
 
 
     # @BA !doesnt trigger the feature views registered transformations !
-    # only store is flexible, so the new feature signal_duration_minutes can be set!
-
-    print(f"Persisted data to Feast:\n{df}")
-
-
-
-    # Persist the DataFrame to the Feast online store
-    # For debugging Shows all registered feature views
-    logger.log(level=20, msg=store.list_feature_views())
-    # @BA !doesnt trigger the feature views registered transformations !
-    # feature_view_name uses the name of the feature view as string
-    # for decorator tag @stream_feature_view the name is the method name
-
-
-
     online_df = store.get_online_features(
         features=[
             "traffic_light_features_stream:signal_duration_minutes"
 
         ], entity_rows=entity_rows).to_df()
-    print("online_df traffic_light_features_stream:signal_duration_minutes \n", online_df)
+    print("post push online_df traffic_light_features_stream:signal_duration_minutes \n", online_df)
 
 
     # need different feature view as offline store doesnt know
-    # about the only feature in the feature viewmwhich is signal_duration_minutes
+    # about the only feature in the feature view which is signal_duration_minutes
     # training_df = store.get_historical_features(
     #     entity_df=entity_df,
     #     features=[
@@ -200,6 +198,7 @@ def persist_to_feast_and_batch(message):
     # @BA aso does NOT trigger registered transformation in stream feature view!
     # store.write_to_offline_store(feature_view_name="traffic_light_features_stream", df=df)
     # print(f"Written to batch source:\n{df}")
+
 
 
 def consume_kafka_messages():

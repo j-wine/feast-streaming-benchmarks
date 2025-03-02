@@ -1,26 +1,28 @@
 import json
-from datetime import datetime, timezone
-from time import sleep
+import random
+import time
+from datetime import datetime, timezone, timedelta
+
 from kafka import KafkaProducer
 
 KAFKA_TOPIC = "traffic_light_signals"
 KAFKA_BROKER = "broker:9092"
-id_counter = 3
+
 
 def generate_traffic_light_data():
-    global id_counter  # Access the global counter
-    # Get current timestamp in ISO 8601 format (UTC)
-    timestamp = datetime.now(timezone.utc).isoformat()
-    id_counter += 1
-    # Simulated data
+    traffic_light_id = random.randint(1, 5)
+
+    primary_signal = random.randint(1, 10)
+    secondary_signal = random.randint(1, 10)
+
+    timestamp = (datetime.now(timezone.utc) + timedelta(seconds=random.randint(0, 15))).isoformat()
+
     return {
-        "traffic_light_id": str(id_counter),
-        "primary_signal": 3,  # Green
-        "secondary_signal": 1,  # Red
+        "traffic_light_id": str(traffic_light_id),
+        "primary_signal": primary_signal,
+        "secondary_signal": secondary_signal,
         "location": "Dammtor/Theodor-Heuss-Platz",
         "event_timestamp": timestamp
-            #"2024-11-05T12:30:00Z"
-
     }
 
 
@@ -34,7 +36,7 @@ def produce_kafka_messages():
         data = generate_traffic_light_data()
         producer.send(KAFKA_TOPIC, data)
         print(f"Sent: {data}")
-        sleep(1)
+        time.sleep(random.uniform(0.5, 2.0))
 
 
 if __name__ == "__main__":

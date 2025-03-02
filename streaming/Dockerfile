@@ -1,4 +1,4 @@
-FROM python:3.10-slim
+FROM python:3.10.11-slim
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
@@ -13,6 +13,8 @@ COPY requirements.txt requirements.txt
 RUN pip install --upgrade pip
 RUN pip install --upgrade dill
 RUN pip install -r requirements.txt
+
+ENV PYTHONWARNINGS="ignore"
 
 COPY kafka_consumer.py /app/
 COPY feature_store.yaml /app/
