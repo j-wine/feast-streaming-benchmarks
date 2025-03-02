@@ -6,11 +6,13 @@ services:
     volumes:
       - ./feature_repo:/app/feature_repo
       - ./feature_repo/offline_data:/app/offline_data  # ✅ Mounts `offline_data` directly inside `/app/`
-
     depends_on:
-      - registry
-      - redis
-      - dask-worker
+      registry:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      dask-worker:
+        condition: service_started
     ports:
       - "6566:6566"
     links:
@@ -19,22 +21,23 @@ services:
       test: "${DOCKER_HEALTHCHECK_TEST:-curl localhost:6566/health}"
       interval: "5s"
       retries: 5
+    restart: unless-stopped
 
   kafka_consumer:
     build:
       context: ./streaming
     volumes:
-     # - ./feature_repo:/app/feature_repo
-      - ./feature_repo/offline_data:/app/offline_data  # ✅ Mounts `offline_data` directly inside `/app/`
-
+      - ./feature_repo/offline_data:/app/offline_data # @BA needed by data_sources.traffic_light_batch_source: FileSource
     container_name: kafka_consumer
     depends_on:
-      - broker
-      - registry
-      - redis
+      broker-1:
+        condition: service_healthy
+      feature_server:
+        condition: service_healthy
     environment:
       - KAFKA_BROKER=broker:9092
       - FEAST_REPO_PATH=/app/feature_repo
+    restart: unless-stopped
 
   spark_ingestor:
     build:
@@ -44,9 +47,11 @@ services:
       - ./feature_repo/offline_data:/app/offline_data  # Mounts `offline_data` directly inside `/app/`
     container_name: spark_ingestor
     depends_on:
-      - broker
-      - registry
-      - redis
+      broker-1:
+        condition: service_healthy
+      feature_server:
+        condition: service_healthy
+    restart: unless-stopped
 
   kafka_producer:
     build:
@@ -54,9 +59,13 @@ services:
       dockerfile: ./streaming/kafka_producer/Dockerfile
     container_name: kafka_producer
     depends_on:
-      - broker
+      broker-1:
+        condition: service_healthy
+      feature_server:
+        condition: service_healthy
     environment:
       - KAFKA_BROKER=broker:9092
+    restart: unless-stopped
 
   registry:
     container_name: registry
@@ -72,6 +81,7 @@ services:
       - ./feast-postgres-registry:/var/lib/postgresql/data
       - ./postgresql.conf:/etc/postgresql/postgresql.conf
       - ./pg_hba.conf:/etc/postgresql/pg_hba.conf
+    restart: unless-stopped
 
     command: >
       postgres
@@ -90,6 +100,7 @@ services:
     container_name: redis
     ports:
       - "6379:6379"
+    restart: unless-stopped
 
   dask-scheduler:
     image: ghcr.io/dask/dask:latest
@@ -98,6 +109,7 @@ services:
     ports:
       - "8786:8786"
       - "8787:8787"
+    restart: unless-stopped
 
   dask-worker:
     image: ghcr.io/dask/dask:latest
@@ -107,6 +119,7 @@ services:
       - dask-scheduler
     links:
       - dask-scheduler
+    restart: unless-stopped
 
   zookeeper:
     image: confluentinc/cp-zookeeper:7.0.1
@@ -114,18 +127,46 @@ services:
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
+    restart: unless-stopped
 
-  broker:
+  broker-1:
     image: confluentinc/cp-kafka:7.0.1
-    container_name: broker
+    container_name: broker-1
     ports:
       - "9092:9092"
     depends_on:
       - zookeeper
     environment:
       KAFKA_BROKER_ID: 1
-      KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
+      KAFKA_ZOOKEEPER_CONNECT: "zookeeper:2181"
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_INTERNAL:PLAINTEXT
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://broker:9092,PLAINTEXT_INTERNAL://broker:29092
-      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,PLAINTEXT_INTERNAL://0.0.0.0:29092
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://broker-1:9092
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 2
+    healthcheck:
+      test: [ "CMD", "kafka-topics", "--bootstrap-server", "broker-1:9092", "--list" ]
+      interval: 10s
+      retries: 5
+      start_period: 20s
+    restart: unless-stopped
+
+  broker-2:
+    image: confluentinc/cp-kafka:7.0.1
+    container_name: broker-2
+    ports:
+      - "9093:9092"
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 2
+      KAFKA_ZOOKEEPER_CONNECT: "zookeeper:2181"
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_INTERNAL:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://broker-2:9093
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9093
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 2
+    healthcheck:
+      test: [ "CMD", "kafka-topics", "--bootstrap-server", "broker-2:9092", "--list" ]
+      interval: 10s
+      retries: 5
+      start_period: 20s
+    restart: unless-stopped

@@ -1,6 +1,8 @@
 import json
 import logging
-import time
+import warnings
+
+warnings.simplefilter("ignore")
 
 from dateutil import parser
 
@@ -10,7 +12,7 @@ from kafka import KafkaConsumer
 
 logger = logging.getLogger('kafka_consumer')
 KAFKA_TOPIC = "traffic_light_signals"
-KAFKA_BROKER = "broker:9092"
+KAFKA_BROKERS = ["broker-1:9092", "broker-2:9093"]
 
 # Initialize the Feast feature store
 store = FeatureStore(repo_path="./")
@@ -185,7 +187,7 @@ def consume_kafka_messages():
     """
     consumer = KafkaConsumer(
         KAFKA_TOPIC,
-        bootstrap_servers=KAFKA_BROKER,
+        bootstrap_servers=KAFKA_BROKERS,
         group_id="feast-persist-consumer",
     )
     print("Consuming messages from Kafka...")

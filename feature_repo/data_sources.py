@@ -29,11 +29,10 @@ traffic_lights_request_source = RequestSource(
     ]
 )
 
-
 # Kafka source for streaming data
 traffic_light_stream_source = KafkaSource(
     name="traffic_light_stream_source",
-    kafka_bootstrap_servers="broker:9092",
+    kafka_bootstrap_servers="broker-1:9092, broker-2:9092",
     topic="traffic_light_signals",
     timestamp_field="event_timestamp",
     batch_source=traffic_light_batch_source,

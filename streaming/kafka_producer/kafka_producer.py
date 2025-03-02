@@ -6,8 +6,7 @@ from datetime import datetime, timezone, timedelta
 from kafka import KafkaProducer
 
 KAFKA_TOPIC = "traffic_light_signals"
-KAFKA_BROKER = "broker:9092"
-
+KAFKA_BROKERS = ["broker-1:9092", "broker-2:9093"]
 
 def generate_traffic_light_data():
     traffic_light_id = random.randint(1, 5)
@@ -25,10 +24,9 @@ def generate_traffic_light_data():
         "event_timestamp": timestamp
     }
 
-
 def produce_kafka_messages():
     producer = KafkaProducer(
-        bootstrap_servers=KAFKA_BROKER,
+        bootstrap_servers=KAFKA_BROKERS,
         value_serializer=lambda v: json.dumps(v).encode('utf-8')
     )
     print("Producing traffic light signals to Kafka...")
@@ -37,7 +35,6 @@ def produce_kafka_messages():
         producer.send(KAFKA_TOPIC, data)
         print(f"Sent: {data}")
         time.sleep(random.uniform(0.5, 2.0))
-
 
 if __name__ == "__main__":
     produce_kafka_messages()
