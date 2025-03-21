@@ -37,7 +37,7 @@ traffic_light_stream_source = KafkaSource(
     timestamp_field="event_timestamp",
     batch_source=traffic_light_batch_source,
     message_format=JsonFormat(
-        schema_json="traffic_light_id string, primary_signal int, secondary_signal int, location string, signal_duration double, event_timestamp timestamp"
+        schema_json="traffic_light_id string, primary_signal int, secondary_signal int, location string, event_timestamp timestamp"
     ),
     watermark_delay_threshold=timedelta(minutes=5),
 )
