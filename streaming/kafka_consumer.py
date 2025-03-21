@@ -76,9 +76,9 @@ def persist_to_feast_and_batch(message):
     }])
     store.write_to_online_store(feature_view_name="traffic_light_stats", df=df)
     print("store.write_to_online_store(feature_view_name=""traffic_light_stats"", df=, )", df)
-
-    store.write_to_offline_store(feature_view_name="traffic_light_stats", df=df)
-    print("store.write_to_offline_store(feature_view_name=""traffic_light_stats"", df=, )", df)
+    # doenst work, probably due to path error when accessing parquet file
+    # store.write_to_offline_store(feature_view_name="traffic_light_stats", df=df)
+    # print("store.write_to_offline_store(feature_view_name=""traffic_light_stats"", df=, )", df)
 
     online_df = store.get_online_features(
         features=[

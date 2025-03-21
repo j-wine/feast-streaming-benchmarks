@@ -11,10 +11,10 @@ KAFKA_BROKERS = ["broker-1:9092", "broker-2:9093"]
 def generate_traffic_light_data():
     traffic_light_id = random.randint(1, 5)
 
-    primary_signal = random.randint(1, 10)
-    secondary_signal = random.randint(1, 10)
+    primary_signal = random.randint(1, 3)
+    secondary_signal = random.randint(1, 3)
 
-    timestamp = (datetime.now(timezone.utc) + timedelta(seconds=random.randint(0, 15))).isoformat()
+    timestamp = (datetime.now(timezone.utc) + timedelta(seconds=random.randint(0, 30))).isoformat()
 
     return {
         "traffic_light_id": str(traffic_light_id),

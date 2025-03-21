@@ -54,10 +54,7 @@ processor = get_stream_processor_object(
     sfv=traffic_light_windowed_features,
     preprocess_fn=preprocess_fn
 )
-
-
-# Start ingestion job (process stream data every 30 seconds)
 query = processor.ingest_stream_feature_view(to=PushMode.ONLINE)
 
 
-query.awaitTermination()  # Ensure the script does not exit
+query.awaitTermination()
