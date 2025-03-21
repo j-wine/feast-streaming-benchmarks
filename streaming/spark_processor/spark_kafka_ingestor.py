@@ -27,8 +27,12 @@ print(f"Using Spark Version: {spark.version}")
 store = FeatureStore()
 
 def preprocess_fn(rows: pd.DataFrame):
-    """Preprocess function to log Spark DataFrame details."""
-    print("start preprocess_fn")
+    """Preprocess function to log Spark DataFrame details before writing to Feast."""
+    import time
+    feast_ingestion_time = time.time()  # @BA Timestamp when Spark pushes data to Feast
+    # i.e. after feature views method body, when the spark df is transformed to pandas df by feast.
+    # as that step is mandatory, we can measure time between call of preprocess and retrieval of features
+    print(f"Spark -> Feast ingestion timestamp: {feast_ingestion_time:.6f}")
     return rows
 
 # Configure Spark ingestion job
