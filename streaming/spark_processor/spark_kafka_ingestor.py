@@ -26,6 +26,7 @@ print(f"Using Spark Version: {spark.version}")
 # Initialize Feature Store
 store = FeatureStore()
 
+
 def preprocess_fn(rows: pd.DataFrame):
     """Preprocess function to log Spark DataFrame details before writing to Feast."""
     import time
@@ -40,11 +41,14 @@ ingestion_config = SparkProcessorConfig(
     mode="spark",
     source="kafka",
     spark_session=spark,
-    processing_time="30 seconds",
-    query_timeout=15
+    processing_time="10 seconds",  # Reduced from 30s for better benchmarking granularity
+    # query_timeout=10          # Reduce timeout to ensure real-time ingestion
 )
 
 # Fetch stream feature view
+# both named get and import work
+# from feature_repo.traffic_light_features import traffic_light_windowed_features
+
 traffic_light_windowed_features = store.get_stream_feature_view("traffic_light_windowed_features")
 
 # Initialize stream processor

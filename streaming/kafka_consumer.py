@@ -46,7 +46,6 @@ def persist_to_feast_and_batch(message):
         {"traffic_light_id": "1"}, {"traffic_light_id": "2"}, {"traffic_light_id": "3"},
         {"traffic_light_id": "4"}, {"traffic_light_id": "5"}
     ]
-
     try:
         # Ensure timestamp is correctly parsed with timezone
         current_timestamp = parser.isoparse(data["event_timestamp"]).astimezone()
@@ -72,7 +71,6 @@ def persist_to_feast_and_batch(message):
         "location": data.get("location"),
         "signal_duration": signal_duration,
         "event_timestamp": data["event_timestamp"],
-
     }])
     store.write_to_online_store(feature_view_name="traffic_light_stats", df=df)
     print("store.write_to_online_store(feature_view_name=""traffic_light_stats"", df=, )", df)
@@ -136,15 +134,14 @@ def persist_to_feast_and_batch(message):
     ).to_df()
     print("post push traffic_light_features_stream:signal_duration_minutes:\n", online_df)
 
-    # Fetch online features for a specific entity
-    entity_rows = [{"traffic_light_id": "1"}]
     online_features = store.get_online_features(
         features=[
-            "traffic_light_windowed_features:avg_signal_duration_minutes",
-            "traffic_light_windowed_features:primary_signal_count",
-            "traffic_light_windowed_features:secondary_signal_count",
-            "traffic_light_windowed_features:total_windowed_primary_signal_duration",
-            "traffic_light_windowed_features:total_windowed_secondary_signal_duration",
+            "traffic_light_windowed_features:avg_primary_red_duration",
+            "traffic_light_windowed_features:avg_primary_green_duration",
+            "traffic_light_windowed_features:avg_primary_amber_duration",
+            "traffic_light_windowed_features:avg_secondary_red_duration",
+            "traffic_light_windowed_features:avg_switch_time_green_to_red",
+            "traffic_light_windowed_features:avg_switch_time_red_to_green"
         ],
         entity_rows=entity_rows
     ).to_dict()

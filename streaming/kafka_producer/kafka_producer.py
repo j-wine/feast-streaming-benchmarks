@@ -34,7 +34,8 @@ def produce_kafka_messages():
         data = generate_traffic_light_data()
         producer.send(KAFKA_TOPIC, data)
         print(f"Sent: {data}")
-        time.sleep(random.uniform(0.5, 2.0))
+        time.sleep(random.uniform(0.1, 0.3))
+        # time.sleep(random.uniform(0.5, 2.0))
 
 if __name__ == "__main__":
     produce_kafka_messages()

@@ -28,6 +28,19 @@ traffic_lights_request_source = RequestSource(
         Field(name="signal_duration", dtype=Float64),
     ]
 )
+"""
+Both primary_signal, have this value range:
+{[0-9]} integer 0=dark, 
+1=red,
+2=amber,
+3=green,
+----
+unused
+4=red-amber,
+5=amber-flashing,
+6=green-flashing,
+9=unknown
+"""
 
 # Kafka source for streaming data
 traffic_light_stream_source = KafkaSource(
