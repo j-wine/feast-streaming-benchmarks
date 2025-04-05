@@ -80,6 +80,7 @@ def consume_kafka_messages():
     print("Consuming messages from Kafka...")
     for message in consumer:
         message_retrieval_time = time.time()
+        print("message_retrieval_time:", message_retrieval_time)
         persist_to_feast_and_batch(message, message_retrieval_time)
 
 
