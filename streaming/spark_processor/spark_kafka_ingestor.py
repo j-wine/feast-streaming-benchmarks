@@ -45,13 +45,13 @@ ingestion_config = SparkProcessorConfig(
 )
 
 # Fetch stream feature view
-traffic_light_windowed_features = store.get_stream_feature_view("traffic_light_windowed_features")
+traffic_light_features_stream = store.get_stream_feature_view("traffic_light_features_stream")
 
 # Initialize stream processor
 processor = get_stream_processor_object(
     config=ingestion_config,
     fs=store,
-    sfv=traffic_light_windowed_features,
+    sfv=traffic_light_features_stream,
     preprocess_fn=preprocess_fn
 )
 query = processor.ingest_stream_feature_view(to=PushMode.ONLINE)

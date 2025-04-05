@@ -24,8 +24,7 @@ traffic_lights_request_source = RequestSource(
         Field(name="traffic_light_id", dtype=String),
         Field(name="primary_signal", dtype=Int64),
         Field(name="secondary_signal", dtype=Int64),
-        Field(name="location", dtype=String),
-        Field(name="signal_duration", dtype=Float64),
+        Field(name="location", dtype=String)
     ]
 )
 
