@@ -33,6 +33,22 @@ def preprocess_fn(rows: pd.DataFrame):
     # i.e. after feature views method body, when the spark df is transformed to pandas df by feast.
     # as that step is mandatory, we can measure time between call of preprocess and retrieval of features
     print(f"Spark -> Feast ingestion timestamp: {feast_ingestion_time:.6f}")
+    # Define the columns to display in the log
+    columns_to_display = [
+        "avg_signal_duration_minutes",
+        "primary_signal_count",
+        "secondary_signal_count",
+        "total_windowed_primary_signal_duration",
+        "total_windowed_secondary_signal_duration"
+    ]
+
+    # Check if the DataFrame contains all the necessary columns
+    if not all(col in rows.columns for col in columns_to_display):
+        missing_cols = [col for col in columns_to_display if col not in rows.columns]
+        print(f"Missing columns in DataFrame: {missing_cols}")
+    else:
+        print(rows[columns_to_display])
+
     return rows
 
 # Configure Spark ingestion job
