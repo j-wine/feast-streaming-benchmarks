@@ -106,10 +106,8 @@ def traffic_light_features_stream(df: DataFrame):
     logger.log(level=logging.INFO, msg=f"in transformation of traffic_light_features_stream")
     """
     # logs or prints here somehow arent visible in container log but the transformation does get triggered on store.push
-    print("in transformation of traffic_light_features_stream, signal duration: ", col("signal_duration"))
-    print("in transformation of traffic_light_features_stream, df: ", df)
 
-    return df.withColumn("signal_duration_minutes", col("signal_duration") / 60)
+    return df.withColumn("signal_duration_minutes", col("primary_signal") + col("secondary_signal"))
 
 @stream_feature_view(
     entities=[traffic_light],
@@ -143,7 +141,7 @@ def traffic_light_windowed_features(df: DataFrame):
     df = df.withColumn("event_timestamp",
                        col("event_timestamp").cast(TimestampType()))
 
-    df = df.withColumn("signal_duration_minutes", col("signal_duration") / 60)
+    df = df.withColumn("signal_duration_minutes", col("primary_signal") + col("secondary_signal"))
 
     # Aggregate over a 10-minute window
     windowed_df = df.groupBy(window(col("event_timestamp"), "10 minutes"), col("traffic_light_id")) \
