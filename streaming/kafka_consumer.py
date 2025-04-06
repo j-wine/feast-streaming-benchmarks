@@ -13,8 +13,8 @@ from kafka import KafkaConsumer
 
 logger = logging.getLogger('kafka_consumer')
 TRAFFIC_LIGHT_TOPIC = "traffic_light_signals"
-BENCHMARK_TOPIC = "benchmark_topic"
-KAFKA_BROKERS = ["broker-1:9092", "broker-2:9093"]
+BENCHMARK_TOPIC = "benchmark_entity_topic"
+KAFKA_BROKERS = ["broker-1:9092"]
 
 # Initialize the Feast feature store
 store = FeatureStore(repo_path="./")
@@ -71,8 +71,8 @@ def process_benchmark_message(message):
     ).to_dict()
     end_time = time.time()
 
-    print(f"Processed benchmark data: {data}")
-    print(f"Retrieval took {end_time - start_time:.2f} seconds for entity ID {entity_id}")
+    print(f"benchmark online_features : {online_features}")
+    print(f"benchmark data Retrieval took {end_time - start_time:.2f} seconds for entity ID {entity_id}")
 
 def consume_kafka_messages():
     """
@@ -86,6 +86,7 @@ def consume_kafka_messages():
     consumer.subscribe([TRAFFIC_LIGHT_TOPIC, BENCHMARK_TOPIC])
     print("Consuming messages from Kafka...")
     for message in consumer:
+        print("message in topic: ", message.topic)
         message_retrieval_time = time.time()
         if message.topic == TRAFFIC_LIGHT_TOPIC:
             process_traffic_light_message(message, message_retrieval_time)

@@ -8,8 +8,8 @@ import pandas as pd
 from kafka import KafkaProducer
 
 TRAFFIC_LIGHT_TOPIC = "traffic_light_signals"
-BENCHMARK_TOPIC = "benchmark_topic"
-KAFKA_BROKERS = ["broker-1:9092", "broker-2:9093"]
+BENCHMARK_TOPIC = "benchmark_entity_topic"
+KAFKA_BROKERS = ["broker-1:9092"]
 
 def read_benchmark_data():
     parquet_file = Path(__file__).parent / "offline_data/generated_data.parquet"

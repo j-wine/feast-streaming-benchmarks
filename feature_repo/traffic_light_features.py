@@ -36,7 +36,7 @@ def feature_sum(df: DataFrame):
     ttl=timedelta(days=140),
     mode="spark",  # apparently spark is currently the only support "mode"
     schema=[
-        Field(name="signal_sum", dtype=Float64),
+        Field(name="sum", dtype=Float64),
     ],
     timestamp_field="event_timestamp",
     online=True,
@@ -45,13 +45,8 @@ def feature_sum(df: DataFrame):
 def benchmark_stream_feature_view(df: DataFrame):
     from pyspark.sql.functions import col
     from pyspark.sql.types import LongType
-    print("in benchmark_stream_feature_view df schema:")
-    df.printSchema()
-    df = df.withColumn("signal_sum", (col("primary_signal") + col("secondary_signal")).cast(LongType()))
-    result_df = df.select("traffic_light_id","event_timestamp", "signal_sum")
-    print("result df schema:")
-    result_df.show()
-    return result_df
+    df = df.withColumn("sum", (col("primary_signal") + col("secondary_signal")).cast(LongType()))
+    return df.select("traffic_light_id","event_timestamp", "sum")
 
 
 @stream_feature_view(

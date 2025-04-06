@@ -137,41 +137,20 @@ services:
 
   broker-1:
     image: confluentinc/cp-kafka:7.0.1
-    container_name: broker-1
+    container_name: broker
     ports:
       - "9092:9092"
     depends_on:
       - zookeeper
     environment:
       KAFKA_BROKER_ID: 1
-      KAFKA_ZOOKEEPER_CONNECT: "zookeeper:2181"
+      KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_INTERNAL:PLAINTEXT
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://broker-1:9092
-      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 2
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://broker:9092,PLAINTEXT_INTERNAL://broker:29092
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,PLAINTEXT_INTERNAL://0.0.0.0:29092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
     healthcheck:
       test: [ "CMD", "kafka-topics", "--bootstrap-server", "broker-1:9092", "--list" ]
-      interval: 10s
-      retries: 5
-      start_period: 20s
-    restart: unless-stopped
-
-  broker-2:
-    image: confluentinc/cp-kafka:7.0.1
-    container_name: broker-2
-    ports:
-      - "9093:9092"
-    depends_on:
-      - zookeeper
-    environment:
-      KAFKA_BROKER_ID: 2
-      KAFKA_ZOOKEEPER_CONNECT: "zookeeper:2181"
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_INTERNAL:PLAINTEXT
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://broker-2:9093
-      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9093
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 2
-    healthcheck:
-      test: [ "CMD", "kafka-topics", "--bootstrap-server", "broker-2:9092", "--list" ]
       interval: 10s
       retries: 5
       start_period: 20s

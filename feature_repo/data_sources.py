@@ -4,7 +4,7 @@ from feast.data_format import JsonFormat
 from feast.types import String, Int64, Float64
 
 TRAFFIC_LIGHT_TOPIC="traffic_light_signals"
-BENCHMARK_TOPIC = "benchmark_signals"
+BENCHMARK_TOPIC = "benchmark_entity_topic"
 
 # Batch source for historical feature retrieval
 traffic_light_batch_source = FileSource(
@@ -16,7 +16,7 @@ traffic_light_batch_source = FileSource(
 # Kafka source for streaming data
 traffic_light_stream_source = KafkaSource(
     name="traffic_light_stream_source",
-    kafka_bootstrap_servers="broker-1:9092, broker-2:9092",
+    kafka_bootstrap_servers="broker-1:9092",
     topic=TRAFFIC_LIGHT_TOPIC,
     timestamp_field="event_timestamp",
     batch_source=traffic_light_batch_source,
@@ -35,7 +35,7 @@ benchmark_batch_source = FileSource(
 
 benchmark_stream_source = KafkaSource(
     name="benchmark_stream_source",
-    kafka_bootstrap_servers="broker-1:9092, broker-2:9092",
+    kafka_bootstrap_servers="broker-1:9092",
     topic=BENCHMARK_TOPIC,
     timestamp_field="event_timestamp",
     batch_source=benchmark_batch_source,
