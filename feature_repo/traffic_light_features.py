@@ -10,37 +10,46 @@ from feast.types import Int64, String, Float64
 
 
 
-from entities import traffic_light
-from feature_repo.data_sources import traffic_light_stream_source
+from entities import traffic_light, benchmark_entity
+from feature_repo.data_sources import traffic_light_stream_source, benchmark_stream_source
 
-logger = logging.getLogger('traffic_light_features')
+
+@stream_feature_view(
+    entities=[benchmark_entity],
+    ttl=timedelta(days=140),
+    mode="spark",  # apparently spark is currently the only support "mode"
+    schema=[
+        Field(name="sum", dtype=Int64),
+    ],
+    timestamp_field="event_timestamp",
+    online=True,
+    source=benchmark_stream_source,
+)
+def feature_sum(df: DataFrame):
+    from pyspark.sql.functions import col
+    from pyspark.sql.types import LongType
+    df = df.withColumn("sum", (col("feature_0") + col("feature_1")).cast(LongType()))
+    return df.select("benchmark_entity","event_timestamp", "sum")
 
 @stream_feature_view(
     entities=[traffic_light],
     ttl=timedelta(days=140),
     mode="spark",  # apparently spark is currently the only support "mode"
     schema=[
-        Field(name="signal_sum", dtype=Int64),
+        Field(name="signal_sum", dtype=Float64),
     ],
     timestamp_field="event_timestamp",
     online=True,
     source=traffic_light_stream_source,
 )
 def benchmark_stream_feature_view(df: DataFrame):
-    # !@BA imports have to be inside the function to serialize it !    """
-
-    """
-    The transformation in method body is called when writing to the store via the view.
-    The input pyspark.sql.dataframe can be transformed with spark.
-    @BA More complex windowed transformations should be done with an ingestion config using spark
-
-    logger.log(level=logging.INFO, msg=f"in transformation of traffic_light_features_stream")
-    """
     from pyspark.sql.functions import col
-    print("in traffic_light_features_stream df schema:")
+    from pyspark.sql.types import LongType
+    print("in benchmark_stream_feature_view df schema:")
     df.printSchema()
-
-    result_df = df.withColumn("signal_sum", col("primary_signal") + col("secondary_signal"))
+    df = df.withColumn("signal_sum", (col("primary_signal") + col("secondary_signal")).cast(LongType()))
+    result_df = df.select("traffic_light_id","event_timestamp", "signal_sum")
+    print("result df schema:")
     result_df.show()
     return result_df
 
@@ -60,6 +69,7 @@ def traffic_light_features_stream(df: DataFrame):
     # !@BA imports have to be inside the function to serialize it !    """
 
     from pyspark.sql.functions import col
+    from pyspark.sql.types import LongType
     """
     The transformation in method body is called when writing to the store via the view.
     The input pyspark.sql.dataframe can be transformed with spark.
@@ -69,7 +79,8 @@ def traffic_light_features_stream(df: DataFrame):
     """
     # logs or prints here somehow arent visible in container log but the transformation does get triggered on store.push
 
-    return df.withColumn("signal_duration_minutes", col("primary_signal") + col("secondary_signal"))
+    df = df.withColumn("signal_duration_minutes", (col("primary_signal") + col("secondary_signal")).cast(LongType()))
+    return df.select("traffic_light_id","event_timestamp", "signal_duration_minutes")
 
 @stream_feature_view(
     entities=[traffic_light],
@@ -117,3 +128,20 @@ def traffic_light_windowed_features(df: DataFrame):
     print("before return in windowed_features:")
     # Ensure event timestamp exists for Feast
     return windowed_df.withColumn("event_timestamp", col("window.start"))
+
+@stream_feature_view(
+    entities=[traffic_light],
+    ttl=timedelta(days=140),
+    mode="spark",  # apparently spark is currently the only support "mode"
+    schema=[
+        Field(name="sum", dtype=Float64),
+    ],
+    timestamp_field="event_timestamp",
+    online=True,
+    source=traffic_light_stream_source,
+)
+def duplicate_sfv(df: DataFrame):
+    from pyspark.sql.functions import col
+    from pyspark.sql.types import LongType
+    df = df.withColumn("sum", (col("primary_signal") + col("secondary_signal")).cast(LongType()))
+    return df.select("traffic_light_id","event_timestamp", "sum")

@@ -9,4 +9,8 @@ traffic_light = Entity(
     value_type=ValueType.STRING
 )
 
-     # value_type=Int64.to_value_type()  # Using the PrimitiveFeastType for INT64
+benchmark_entity = Entity(
+    name="benchmark_entity",
+    join_keys=["benchmark_entity"],
+    value_type=ValueType.INT64,
+)

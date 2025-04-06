@@ -12,31 +12,14 @@ from feast import FeatureStore
 from kafka import KafkaConsumer
 
 logger = logging.getLogger('kafka_consumer')
-KAFKA_TOPIC = "traffic_light_signals"
+TRAFFIC_LIGHT_TOPIC = "traffic_light_signals"
+BENCHMARK_TOPIC = "benchmark_topic"
 KAFKA_BROKERS = ["broker-1:9092", "broker-2:9093"]
 
 # Initialize the Feast feature store
 store = FeatureStore(repo_path="./")
 
-# Cache for last signal timestamps
-last_signal_timestamps = {}
-
-
-def calculate_signal_duration(traffic_light_id, current_timestamp):
-    """
-    Calculate the signal duration based on the last signal timestamp.
-    """
-    last_timestamp = last_signal_timestamps.get(traffic_light_id)
-    if last_timestamp is None:
-        signal_duration = 0  # Initialize with 0 if no previous timestamp exists
-    else:
-        signal_duration = (current_timestamp - last_timestamp).total_seconds()
-    # Update the cache with the current timestamp
-    last_signal_timestamps[traffic_light_id] = current_timestamp
-    return signal_duration
-
-
-def persist_to_feast_and_batch(message, message_retrieval_time):
+def process_traffic_light_message(message, message_retrieval_time):
     """
     Persist Kafka-transformed message to Feast online store and batch source.
     """
@@ -46,14 +29,6 @@ def persist_to_feast_and_batch(message, message_retrieval_time):
         {"traffic_light_id": "1"}, {"traffic_light_id": "2"}, {"traffic_light_id": "3"},
         {"traffic_light_id": "4"}, {"traffic_light_id": "5"}
     ]
-    online_df = store.get_online_features(
-        features=[
-            "traffic_light_transformed_features:signal_duration_minutes"
-        ], entity_rows=entity_rows).to_df()
-    print("traffic_light_features_stream:signal_duration_minutes:\n", online_df)
-    data_retrieval_time = time.time()
-    #print(data_retrieval_time - message_retrieval_time)
-    print("data_retrieval_time:", data_retrieval_time)
     online_features = store.get_online_features(
         features=[
             "traffic_light_windowed_features:avg_signal_duration_minutes",
@@ -64,24 +39,58 @@ def persist_to_feast_and_batch(message, message_retrieval_time):
         ],
         entity_rows=entity_rows
     ).to_dict()
-    print("post push traffic_light_windowed_features:", online_features)
+    print("traffic_light_windowed_features:", online_features)
+    data_retrieval_time = time.time()
+    print("data_retrieval_time:", data_retrieval_time)
 
+def create_benchmark_counter():
+    """
+    Creates a closure for counting processed benchmark messages.
+    """
+    count = 0  # Initialize counter at 0
 
+    def count_up():
+        nonlocal count
+        count += 1
+        return count
+
+    return count_up
+benchmark_counter = create_benchmark_counter()
+
+def process_benchmark_message(message):
+    data = json.loads(message.value.decode("utf-8"))
+    entity_id = benchmark_counter()  # Increment and get the current ID
+
+    start_time = time.time()
+    print(f"Processing benchmark data for entity ID: {entity_id}")
+    online_features = store.get_online_features(
+        features=[
+            "feature_sum:sum",
+        ],
+        entity_rows=[{"benchmark_entity": entity_id}]
+    ).to_dict()
+    end_time = time.time()
+
+    print(f"Processed benchmark data: {data}")
+    print(f"Retrieval took {end_time - start_time:.2f} seconds for entity ID {entity_id}")
 
 def consume_kafka_messages():
     """
-    Consumes messages from Kafka and persists them to Feast online store and batch source(=offline store)
+    Consumes messages from Kafka and processes them based on the topic.
     """
     consumer = KafkaConsumer(
-        KAFKA_TOPIC,
         bootstrap_servers=KAFKA_BROKERS,
-        group_id="feast-persist-consumer",
+        auto_offset_reset='earliest',
+        group_id="feast-persist-consumer"
     )
+    consumer.subscribe([TRAFFIC_LIGHT_TOPIC, BENCHMARK_TOPIC])
     print("Consuming messages from Kafka...")
     for message in consumer:
         message_retrieval_time = time.time()
-        print("message_retrieval_time:", message_retrieval_time)
-        persist_to_feast_and_batch(message, message_retrieval_time)
+        if message.topic == TRAFFIC_LIGHT_TOPIC:
+            process_traffic_light_message(message, message_retrieval_time)
+        elif message.topic == BENCHMARK_TOPIC:
+            process_benchmark_message(message)
 
 
 if __name__ == "__main__":
