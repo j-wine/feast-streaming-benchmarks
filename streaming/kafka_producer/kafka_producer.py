@@ -43,8 +43,8 @@ def produce_kafka_messages():
     benchmark_iter = iter(benchmark_df.itertuples(index=False, name=None))  # Use itertuples for better performance
     print("Producing traffic light signals to Kafka...")
     while True:
-        traffic_light_data  = generate_traffic_light_data()
-        producer.send(TRAFFIC_LIGHT_TOPIC, traffic_light_data)
+        # traffic_light_data  = generate_traffic_light_data()
+        # producer.send(TRAFFIC_LIGHT_TOPIC, traffic_light_data)
 
         # Send one benchmark entity if available
         try:
@@ -67,9 +67,9 @@ def produce_kafka_messages():
             print(f"Sent Benchmark Data: {benchmark_entity}")
         except StopIteration:
             print("All benchmark entities have been sent.")
-            break  # Exit the loop if no more benchmark entities are left to send
+            break
 
-        time.sleep(random.uniform(0.5, 2.0))
+        time.sleep(1)
 
 if __name__ == "__main__":
     produce_kafka_messages()

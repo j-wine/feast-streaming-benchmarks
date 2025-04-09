@@ -34,7 +34,7 @@ services:
         condition: service_healthy
       feature_server:
         condition: service_healthy
-      spark_ingestor:
+      kafka_producer:
         condition: service_started
     environment:
       - KAFKA_BROKER=broker:9092
@@ -46,7 +46,7 @@ services:
       context: ./streaming/spark_processor
       dockerfile: ./Dockerfile
     volumes:
-      - ./feature_repo/offline_data:/app/offline_data  # Mounts `offline_data` directly inside `/app/`
+      - ./feature_repo/offline_data:/app/offline_data
     container_name: spark_ingestor
     depends_on:
       broker-1:

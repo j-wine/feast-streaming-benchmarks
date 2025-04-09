@@ -56,7 +56,7 @@ ingestion_config = SparkProcessorConfig(
     mode="spark",
     source="kafka",
     spark_session=spark,
-    processing_time="5 seconds",
+    processing_time="1 seconds",
     query_timeout=15
 )
 
