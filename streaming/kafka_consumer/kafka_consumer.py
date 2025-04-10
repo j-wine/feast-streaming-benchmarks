@@ -5,6 +5,9 @@ import time
 import json
 import time
 import threading
+
+ENTITY_PER_SECOND = 20
+PROCESSING_TIME=5
 warnings.simplefilter("ignore")
 
 from dateutil import parser
@@ -14,36 +17,11 @@ from feast import FeatureStore
 from kafka import KafkaConsumer
 
 logger = logging.getLogger('kafka_consumer')
-TRAFFIC_LIGHT_TOPIC = "traffic_light_signals"
 BENCHMARK_TOPIC = "benchmark_entity_topic"
 KAFKA_BROKERS = ["broker-1:9092"]
 
 # Initialize the Feast feature store
-store = FeatureStore(repo_path="./")
-
-def process_traffic_light_message(message, message_retrieval_time):
-    """
-    Persist Kafka-transformed message to Feast online store and batch source.
-    """
-    # Deserialize the Kafka message
-    # data = json.loads(message.value.decode("utf-8"))
-    entity_rows = [
-        {"traffic_light_id": "1"}, {"traffic_light_id": "2"}, {"traffic_light_id": "3"},
-        {"traffic_light_id": "4"}, {"traffic_light_id": "5"}
-    ]
-    online_features = store.get_online_features(
-        features=[
-            "traffic_light_windowed_features:avg_signal_duration_minutes",
-            "traffic_light_windowed_features:primary_signal_count",
-            "traffic_light_windowed_features:secondary_signal_count",
-            "traffic_light_windowed_features:total_windowed_primary_signal_duration",
-            "traffic_light_windowed_features:total_windowed_secondary_signal_duration",
-        ],
-        entity_rows=entity_rows
-    ).to_dict()
-    print("traffic_light_windowed_features:", online_features)
-    data_retrieval_time = time.time()
-    print("data_retrieval_time:", data_retrieval_time)
+store = FeatureStore()
 
 def create_benchmark_counter():
     """
@@ -62,9 +40,11 @@ benchmark_counter = create_benchmark_counter()
 
 
 def process_benchmark_message(message, message_retrieval_time):
-    # data = json.loads(message.value.decode("utf-8"))
-    entity_id = benchmark_counter()  # Increment and get the current ID
-
+    data = json.loads(message.value.decode("utf-8"))
+    # entity_id = benchmark_counter()  # Increment and get the current ID
+    entity_id = data['benchmark_entity']  # Directly use the entity ID from the Kafka message
+    # sleep half the duration of a spark cycle after the data arrives
+    time.sleep(PROCESSING_TIME)
     print(f"Processing benchmark data for entity ID: {entity_id}")
     online_features = store.get_online_features(
         features=[
@@ -77,7 +57,6 @@ def process_benchmark_message(message, message_retrieval_time):
 
     if online_features['sum'][0] is None:
         def poll_features():
-            start_time = time.time()  # Start timing when polling starts
             while True:
                 updated_features = store.get_online_features(
                     features=["feature_sum:sum"],
@@ -86,18 +65,18 @@ def process_benchmark_message(message, message_retrieval_time):
                 ).to_dict()
                 if updated_features['feature_sum__sum'][0] is not None:
                     end_time = time.time()  # Stop timing when value is retrieved
-                    print(f"Updated online_features for entity ID {entity_id}: {updated_features}")
-                    print(f"Data was successfully retrieved after {end_time - start_time:.2f} seconds.")
+                    # print(f"Updated online_features for entity ID {entity_id}: {updated_features}")
+                    print(f"[luck]benchmark data retrieval took {end_time - message_retrieval_time:.10f} seconds for entity ID{entity_id} at end_time:{end_time}")
                     break
-                time.sleep(0.1)  # Poll every 100ms
+                time.sleep(0.1)
 
         # Start a thread to poll the features
         polling_thread = threading.Thread(target=poll_features)
         polling_thread.start()
     else:
-        print(f"Initial online_features: {online_features}")
+        # print(f"Initial online_features: {online_features}")
         end_time = time.time()
-        print(f"Benchmark data retrieval took {end_time - message_retrieval_time:.2f} seconds for entity ID {entity_id}")
+        print(f"Benchmark data retrieval took {end_time - message_retrieval_time:.10f} seconds for entity ID {entity_id} at end_time:{end_time}")
 
 # Note: `benchmark_counter` and `store.get_online_features` must be defined in your actual code.
 
@@ -110,15 +89,11 @@ def consume_kafka_messages():
         auto_offset_reset='earliest',
         group_id="feast-persist-consumer"
     )
-    consumer.subscribe([TRAFFIC_LIGHT_TOPIC, BENCHMARK_TOPIC])
+    consumer.subscribe([BENCHMARK_TOPIC])
     print("Consuming messages from Kafka...")
     for message in consumer:
-        print("message in topic: ", message.topic)
         message_retrieval_time = time.time()
-        if message.topic == TRAFFIC_LIGHT_TOPIC:
-            process_traffic_light_message(message, message_retrieval_time)
-        elif message.topic == BENCHMARK_TOPIC:
-            process_benchmark_message(message, message_retrieval_time)
+        process_benchmark_message(message, message_retrieval_time)
 
 
 if __name__ == "__main__":

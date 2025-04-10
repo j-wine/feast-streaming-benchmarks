@@ -7,31 +7,16 @@ from pathlib import Path
 import pandas as pd
 from kafka import KafkaProducer
 
-TRAFFIC_LIGHT_TOPIC = "traffic_light_signals"
 BENCHMARK_TOPIC = "benchmark_entity_topic"
 KAFKA_BROKERS = ["broker-1:9092"]
-
+ENTITY_PER_SECOND = 200
 def read_benchmark_data():
     parquet_file = Path(__file__).parent / "offline_data/generated_data.parquet"
     df = pd.read_parquet(parquet_file)
     df = df.sort_values("benchmark_entity")  # Sorting the DataFrame by 'benchmark_entity'
     return df
 
-def generate_traffic_light_data():
-    traffic_light_id = random.randint(1, 5)
 
-    primary_signal = random.randint(1, 3)
-    secondary_signal = random.randint(1, 3)
-
-    timestamp = (datetime.now(timezone.utc) + timedelta(seconds=random.randint(0, 30))).isoformat()
-
-    return {
-        "traffic_light_id": str(traffic_light_id),
-        "primary_signal": primary_signal,
-        "secondary_signal": secondary_signal,
-        "location": "Dammtor/Theodor-Heuss-Platz",
-        "event_timestamp": timestamp
-    }
 
 def produce_kafka_messages():
     producer = KafkaProducer(
@@ -40,13 +25,9 @@ def produce_kafka_messages():
     )
 
     benchmark_df = read_benchmark_data()
-    benchmark_iter = iter(benchmark_df.itertuples(index=False, name=None))  # Use itertuples for better performance
-    print("Producing traffic light signals to Kafka...")
+    benchmark_iter = iter(benchmark_df.itertuples(index=False, name=None))
+    print("Writing benchmark data to kafka...")
     while True:
-        # traffic_light_data  = generate_traffic_light_data()
-        # producer.send(TRAFFIC_LIGHT_TOPIC, traffic_light_data)
-
-        # Send one benchmark entity if available
         try:
             benchmark_data = next(benchmark_iter)
             benchmark_entity = {
@@ -69,7 +50,7 @@ def produce_kafka_messages():
             print("All benchmark entities have been sent.")
             break
 
-        time.sleep(1)
+        time.sleep(1 / ENTITY_PER_SECOND ) # produce x messages per second
 
 if __name__ == "__main__":
     produce_kafka_messages()

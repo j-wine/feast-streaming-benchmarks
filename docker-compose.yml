@@ -25,7 +25,7 @@ services:
 
   kafka_consumer:
     build:
-      context: ./streaming
+      context: ./streaming/kafka_consumer
     volumes:
       - ./feature_repo/offline_data:/app/offline_data # @BA needed by data_sources.traffic_light_batch_source: FileSource
     container_name: kafka_consumer
