@@ -1,33 +1,49 @@
-import datetime
 import time
+import datetime
 
-def my_function(time: datetime.datetime):
-    print("Function is executed at:", time.strftime("%Y-%m-%d %H:%M:%S.%f"))
 
-def schedule_function(target_second,f):
+def _wait_until(target_ts):
+    """Wait until the precise float timestamp."""
+    sleep_time = target_ts - time.time()
+    if sleep_time > 0.002:
+        time.sleep(sleep_time - 0.001)
+
+    while time.time() < target_ts:
+        pass
+
+
+def schedule_function(target_second, f, arg):
+    """Run once at the next occurrence of the given second (0–59)."""
     now = datetime.datetime.now()
-    # Set target time with 0 microseconds
-    target_time = now.replace(second=target_second, microsecond=0)
+    target = now.replace(second=target_second, microsecond=0)
 
-    # If the target time is earlier in the current minute, shift to next minute
-    if target_time <= now:
-        target_time += datetime.timedelta(minutes=1)
+    if target <= now:
+        target += datetime.timedelta(minutes=1)
 
-    # Calculate total wait time
-    wait_time = (target_time - now).total_seconds()
+    target_ts = target.timestamp()
+    _wait_until(target_ts)
 
-    # Sleep until just before the target time (with small margin)
-    if wait_time > 0.5:
-        time.sleep(wait_time - 0.5)
+    now = datetime.datetime.now()
+    print("Function is executed at:", now.strftime("%Y-%m-%d %H:%M:%S.%f"), flush=True)
+    f(arg)
 
-    # High-precision wait loop
+
+def schedule_repeating_function(start_second, interval, f, arg):
+    """Run first at start_second, then repeat every `interval` seconds."""
+    now = datetime.datetime.now()
+    target = now.replace(second=start_second, microsecond=0)
+
+    if target <= now:
+        target += datetime.timedelta(minutes=1)
+
+    next_ts = target.timestamp()
+
     while True:
+        _wait_until(next_ts)
+
         now = datetime.datetime.now()
-        if now >= target_time:
-            break
-        # Very short sleep to yield CPU, allows for fine timing
-        time.sleep(0.0001)
+        print("Function is executed at:", now.strftime("%Y-%m-%d %H:%M:%S.%f"), flush=True)
+        f(arg)
 
-    f(now)
+        next_ts += interval
 
-schedule_function(30,my_function)
