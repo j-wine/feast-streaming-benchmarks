@@ -2,7 +2,7 @@ import time
 import datetime
 
 
-def _wait_until(target_ts):
+def wait_until(target_ts):
     """Wait until the precise float timestamp."""
     sleep_time = target_ts - time.time()
     if sleep_time > 0.002:
@@ -21,7 +21,7 @@ def schedule_function(target_second, f, arg):
         target += datetime.timedelta(minutes=1)
 
     target_ts = target.timestamp()
-    _wait_until(target_ts)
+    wait_until(target_ts)
 
     now = datetime.datetime.now()
     print("Function is executed at:", now.strftime("%Y-%m-%d %H:%M:%S.%f"), flush=True)
@@ -39,7 +39,7 @@ def schedule_repeating_function(start_second, interval, f, arg):
     next_ts = target.timestamp()
 
     while True:
-        _wait_until(next_ts)
+        wait_until(next_ts)
 
         now = datetime.datetime.now()
         print("Function is executed at:", now.strftime("%Y-%m-%d %H:%M:%S.%f"), flush=True)
