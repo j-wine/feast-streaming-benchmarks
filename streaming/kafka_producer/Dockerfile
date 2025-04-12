@@ -14,8 +14,9 @@ COPY requirements.txt requirements.txt
 RUN pip install -r requirements.txt
 
 # Copy the producer code and data
-COPY ./streaming/kafka_producer/kafka_producer.py /app/
+COPY kafka_producer.py /app/
+COPY timing_helper.py /app/
 
 WORKDIR /app
 # wait for kafka broker
-CMD ["sh", "-c", "sleep 10 && python kafka_producer.py"]
+CMD ["sh", "-c", "sleep 5 && python kafka_producer.py"]

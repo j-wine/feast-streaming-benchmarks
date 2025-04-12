@@ -23,6 +23,7 @@ RUN pip install --no-cache-dir -r /app/requirements.txt
 
 # Copy the script into the container
 COPY spark_kafka_ingestor.py /app/spark_kafka_ingestor.py
+COPY timing_helper.py /app/
 COPY feature_store.yaml /app/feature_store.yaml
 # Run PySpark script
 CMD ["python", "/app/spark_kafka_ingestor.py"]
