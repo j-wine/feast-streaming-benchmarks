@@ -6,9 +6,13 @@ from feast.infra.contrib.spark_kafka_processor import SparkProcessorConfig
 from feast.infra.contrib.stream_processor import get_stream_processor_object
 from pyspark.sql import SparkSession
 
+from timing_helper import wait_until
+
 # Use environment variables set by Docker
 JAVA_HOME = os.getenv("JAVA_HOME")
 SPARK_HOME = os.getenv("SPARK_HOME")
+
+PROCESSING_START=30
 
 # Ensure PySpark is properly configured with Kafka support
 os.environ["PYSPARK_SUBMIT_ARGS"] = "--packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.0 pyspark-shell"
@@ -54,6 +58,7 @@ processor = get_stream_processor_object(
     sfv=traffic_light_windowed_features,
     preprocess_fn=preprocess_fn
 )
+wait_until(PROCESSING_START)
 query = processor.ingest_stream_feature_view(to=PushMode.ONLINE)
 
 query.awaitTermination()

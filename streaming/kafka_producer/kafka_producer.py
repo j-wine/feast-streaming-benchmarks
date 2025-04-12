@@ -1,22 +1,22 @@
 import json
-import random
 import time
-from datetime import datetime, timezone, timedelta
 from pathlib import Path
-
 import pandas as pd
 from kafka import KafkaProducer
 
+import timing_helper
+
 BENCHMARK_TOPIC = "benchmark_entity_topic"
 KAFKA_BROKERS = ["broker-1:9092"]
-ENTITY_PER_SECOND = 200
+
+ENTITY_PER_SECOND = 10
+PROCESSING_START=30
+
 def read_benchmark_data():
     parquet_file = Path(__file__).parent / "offline_data/generated_data.parquet"
     df = pd.read_parquet(parquet_file)
     df = df.sort_values("benchmark_entity")  # Sorting the DataFrame by 'benchmark_entity'
     return df
-
-
 
 def produce_kafka_messages():
     producer = KafkaProducer(
@@ -27,6 +27,7 @@ def produce_kafka_messages():
     benchmark_df = read_benchmark_data()
     benchmark_iter = iter(benchmark_df.itertuples(index=False, name=None))
     print("Writing benchmark data to kafka...")
+    timing_helper.wait_until(PROCESSING_START)
     while True:
         try:
             benchmark_data = next(benchmark_iter)
