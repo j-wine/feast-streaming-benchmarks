@@ -1,20 +1,19 @@
 import json
 import logging
-import warnings
-import time
-import json
-import time
 import threading
+import time
+import warnings
 
-ENTITY_PER_SECOND = 20
-PROCESSING_TIME=5
-warnings.simplefilter("ignore")
-
-from dateutil import parser
-
-import pandas as pd
 from feast import FeatureStore
 from kafka import KafkaConsumer
+
+from timing_helper import wait_until
+
+ENTITY_PER_SECOND = 10 # entities per second produced by kafka producer
+PROCESSING_INTERVAL=5 # processing time of spark ingestor
+PROCESSING_START=30 # start at second 30
+warnings.simplefilter("ignore")
+
 
 logger = logging.getLogger('kafka_consumer')
 BENCHMARK_TOPIC = "benchmark_entity_topic"
@@ -23,28 +22,12 @@ KAFKA_BROKERS = ["broker-1:9092"]
 # Initialize the Feast feature store
 store = FeatureStore()
 
-def create_benchmark_counter():
-    """
-    Creates a closure for counting processed benchmark messages.
-    """
-    count = 0  # Initialize counter at 0
-
-    def count_up():
-        nonlocal count
-        count += 1
-        return count
-
-    return count_up
-benchmark_counter = create_benchmark_counter()
-
-
-
 def process_benchmark_message(message, message_retrieval_time):
     data = json.loads(message.value.decode("utf-8"))
     # entity_id = benchmark_counter()  # Increment and get the current ID
     entity_id = data['benchmark_entity']  # Directly use the entity ID from the Kafka message
-    # sleep half the duration of a spark cycle after the data arrives
-    time.sleep(PROCESSING_TIME)
+
+
     print(f"Processing benchmark data for entity ID: {entity_id}")
     online_features = store.get_online_features(
         features=[
@@ -57,6 +40,8 @@ def process_benchmark_message(message, message_retrieval_time):
 
     if online_features['sum'][0] is None:
         def poll_features():
+            wait_until(PROCESSING_START+PROCESSING_INTERVAL)
+
             while True:
                 updated_features = store.get_online_features(
                     features=["feature_sum:sum"],
@@ -90,8 +75,11 @@ def consume_kafka_messages():
         group_id="feast-persist-consumer"
     )
     consumer.subscribe([BENCHMARK_TOPIC])
-    print("Consuming messages from Kafka...")
+    first_cycle=True
     for message in consumer:
+        if(first_cycle):
+            wait_until(PROCESSING_START + PROCESSING_INTERVAL)
+            first_cycle=False
         message_retrieval_time = time.time()
         process_benchmark_message(message, message_retrieval_time)
 
