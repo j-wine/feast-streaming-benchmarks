@@ -1,5 +1,6 @@
 import json
 import time
+import datetime
 from pathlib import Path
 import pandas as pd
 from kafka import KafkaProducer
@@ -9,7 +10,7 @@ import timing_helper
 BENCHMARK_TOPIC = "benchmark_entity_topic"
 KAFKA_BROKERS = ["broker-1:9092"]
 
-ENTITY_PER_SECOND = 10
+ENTITY_PER_SECOND = 1000
 PROCESSING_START=30
 
 def read_benchmark_data():
@@ -27,7 +28,7 @@ def produce_kafka_messages():
     benchmark_df = read_benchmark_data()
     benchmark_iter = iter(benchmark_df.itertuples(index=False, name=None))
     print("Writing benchmark data to kafka...")
-    timing_helper.wait_until(PROCESSING_START)
+    timing_helper.wait_until_second(PROCESSING_START)
     while True:
         try:
             benchmark_data = next(benchmark_iter)
