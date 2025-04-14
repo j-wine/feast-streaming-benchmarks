@@ -16,7 +16,6 @@ ENV PYTHONWARNINGS="ignore"
 
 COPY kafka_consumer.py /app/
 COPY feature_store.yaml /app/
-COPY timing_helper.py /app/
 WORKDIR /app
 # wait for kafka broker
 CMD ["sh", "-c", "sleep 10 && python kafka_consumer.py"]
