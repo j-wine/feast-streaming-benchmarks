@@ -28,6 +28,7 @@ services:
       context: ./streaming/kafka_consumer
     volumes:
       - ./feature_repo/offline_data:/app/offline_data # @BA needed by data_sources.traffic_light_batch_source: FileSource
+      - ./logs:/app/logs # access on csv log
     container_name: kafka_consumer
     depends_on:
       broker-1:

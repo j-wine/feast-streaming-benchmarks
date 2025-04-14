@@ -1,3 +1,4 @@
+import datetime
 import json
 import threading
 import time
@@ -6,21 +7,25 @@ import os
 from queue import Queue
 from feast import FeatureStore
 from kafka import KafkaConsumer
+
 BENCHMARK_ROWS = 10_000
-# Configuration
-ENTITY_PER_SECOND = 20
+ENTITY_PER_SECOND = 500
 PROCESSING_INTERVAL = 1  # seconds
-GROUP_SIZE = ENTITY_PER_SECOND * PROCESSING_INTERVAL
+
 BENCHMARK_TOPIC = "benchmark_entity_topic"
 KAFKA_BROKERS = ["broker-1:9092"]
-CSV_PATH = "kafka_latency_log.csv"
+
+RUN_ID = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+GROUP_ID  = f"feast-consumer-{RUN_ID}"
+CSV_PATH = f"/app/logs/kafka_latency_log_{RUN_ID}.csv"
+
+GROUP_SIZE = ENTITY_PER_SECOND * PROCESSING_INTERVAL
 
 store = FeatureStore()
 current_group = []
 group_times = []
 group_lock = threading.Lock()
 result_queue = Queue()
-
 
 def schedule_polling(entities, receive_times):
     """Polling thread: polls until all entities have data, puts results into queue."""
@@ -77,14 +82,19 @@ def consume_kafka_messages():
         BENCHMARK_TOPIC,
         bootstrap_servers=KAFKA_BROKERS,
         auto_offset_reset='earliest',
-        group_id="feast-persist-consumer"
+        group_id=GROUP_ID
     )
 
     print("🚀 Consuming Kafka messages...")
+    seen_entity_ids = set()
     for message in consumer:
         receive_time = time.time()
         data = json.loads(message.value.decode("utf-8"))
         entity_id = data["benchmark_entity"]
+        seen_entity_ids.add(entity_id)
+        if len(seen_entity_ids) >= BENCHMARK_ROWS :
+            print(f"🛑 Reached {BENCHMARK_ROWS} unique entity IDs")
+            break
         with group_lock:
             current_group.append(entity_id)
             group_times.append(receive_time)
