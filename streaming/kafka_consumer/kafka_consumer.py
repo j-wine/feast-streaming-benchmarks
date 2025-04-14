@@ -87,14 +87,17 @@ def consume_kafka_messages():
 
     print("🚀 Consuming Kafka messages...")
     seen_entity_ids = set()
+    duplicate_entity_ids = set()
     for message in consumer:
         receive_time = time.time()
         data = json.loads(message.value.decode("utf-8"))
         entity_id = data["benchmark_entity"]
+        if entity_id in seen_entity_ids:
+            duplicate_entity_ids.add(entity_id)
+            print(f"⚠️ Duplicate entity_id encountered: {entity_id}")
+            continue
         seen_entity_ids.add(entity_id)
-        if len(seen_entity_ids) >= BENCHMARK_ROWS :
-            print(f"🛑 Reached {BENCHMARK_ROWS} unique entity IDs")
-            break
+
         with group_lock:
             current_group.append(entity_id)
             group_times.append(receive_time)
@@ -110,9 +113,20 @@ def consume_kafka_messages():
                     args=(entities, times),
                     daemon=True
                 ).start()
-        if entity_id == BENCHMARK_ROWS:
-            print(f"🛑 Reached last expected entity: {entity_id}")
+
+        if len(seen_entity_ids) >= BENCHMARK_ROWS:
+            print(f"🛑 Reached {BENCHMARK_ROWS} unique entity IDs")
             break
+
+    if duplicate_entity_ids:
+        duplicates_csv = f"/app/logs/duplicates_{RUN_ID}.csv"
+        with open(duplicates_csv, "w") as f:
+            f.write("entity_id\n")
+            for dup in sorted(duplicate_entity_ids):
+                f.write(f"{dup}\n")
+        print(f"📁 Duplicates written to {duplicates_csv}")
+    else:
+        print("✅ No duplicate entity_ids encountered.")
 
 
 if __name__ == "__main__":
