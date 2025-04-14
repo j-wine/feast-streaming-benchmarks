@@ -1,19 +1,26 @@
 import datetime
-import pyarrow as pa
-import pyarrow.parquet as pq
 import pandas as pd
 import numpy as np
 from pathlib import Path
 
-def generate_data(num_rows: int, num_features: int, key_space: int) -> pd.DataFrame:
+def generate_data(num_entities: int, num_features: int) -> pd.DataFrame:
     features = [f"feature_{i}" for i in range(num_features)]
     columns = ["benchmark_entity", "event_timestamp"] + features
-    df = pd.DataFrame(0, index=np.arange(num_rows), columns=columns)
+
+    # One row per entity, each entity appears exactly once
+    df = pd.DataFrame(index=np.arange(num_entities), columns=columns)
+    df["benchmark_entity"] = list(range(num_entities))
     df["event_timestamp"] = datetime.datetime.utcnow()
-    for column in ["benchmark_entity"] + features:
-        df[column] = np.random.randint(1, key_space, num_rows)
+
+    feature_data = np.random.randint(1, num_entities, size=(num_entities, num_features))
+    for i, feat in enumerate(features):
+        df[feat] = feature_data[:, i]
     return df
 
 if __name__ == "__main__":
-    df = generate_data(10**4, 10, 10**4)
-    df.to_parquet(Path(__file__).parent / "feature_repo/offline_data/generated_data.parquet")
+    output_path = Path(__file__).parent / "feature_repo/offline_data/generated_data.parquet"
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    df = generate_data(num_entities=10_000, num_features=10)
+    df.to_parquet(output_path, index=False)
+    print(f"✅ Generated {output_path}")
