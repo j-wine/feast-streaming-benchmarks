@@ -34,7 +34,8 @@ def produce_kafka_messages():
             benchmark_data = next(benchmark_iter)
             benchmark_entity = {
                 "benchmark_entity": benchmark_data[0],
-                "event_timestamp": benchmark_data[1].isoformat(),
+                # "event_timestamp": benchmark_data[1].isoformat(),
+                "event_timestamp": datetime.datetime.utcnow().isoformat(),
                 "feature_0": benchmark_data[2],
                 "feature_1": benchmark_data[3],
                 "feature_2": benchmark_data[4],
