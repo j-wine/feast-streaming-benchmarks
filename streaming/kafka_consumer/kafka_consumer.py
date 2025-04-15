@@ -7,9 +7,8 @@ import os
 from queue import Queue
 from feast import FeatureStore
 from kafka import KafkaConsumer
-
 BENCHMARK_ROWS = 10_000
-ENTITY_PER_SECOND = 500
+ENTITY_PER_SECOND = 1000
 PROCESSING_INTERVAL = 1  # seconds
 
 BENCHMARK_TOPIC = "benchmark_entity_topic"
@@ -17,10 +16,10 @@ KAFKA_BROKERS = ["broker-1:9092"]
 
 RUN_ID = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
 GROUP_ID  = f"feast-consumer-{RUN_ID}"
-CSV_PATH = f"/app/logs/kafka_latency_log_{RUN_ID}.csv"
+CSV_PATH = f"/app/logs/kafka_latency_log.csv"
 
 GROUP_SIZE = ENTITY_PER_SECOND * PROCESSING_INTERVAL
-
+polling_threads = []
 store = FeatureStore()
 current_group = []
 group_times = []
@@ -68,20 +67,98 @@ def write_results_from_queue():
     all_results.sort(key=lambda r: r["receive_timestamp"])
     # Write all to CSV at once
     with open(CSV_PATH, "a", newline="") as f:
-        writer = csv.DictWriter(f, fieldnames=[
+        writer = csv.DictWriter(f, fieldnames=
+        [
             "entity_id", "receive_timestamp", "retrieval_timestamp", "consumer_latency"
-        ])
+        ],delimiter=";")
         writer.writerows(all_results)
         print(f"📝 Wrote {len(all_results)} entries to {CSV_PATH}")
 
-
-
-
-def consume_kafka_messages():
+from datetime import datetime
+def consume_kafka_messages_individual_polling():
     consumer = KafkaConsumer(
         BENCHMARK_TOPIC,
         bootstrap_servers=KAFKA_BROKERS,
-        auto_offset_reset='earliest',
+        auto_offset_reset='latest',
+        group_id=GROUP_ID
+    )
+    for partition in consumer.assignment():
+        position = consumer.position(partition)
+        print(f"Consumer position for {partition}: {position}")
+    print("🚀 Consuming Kafka messages (individual polling)...")
+    seen_entity_ids = set()
+    duplicate_entity_ids = set()
+
+    for message in consumer:
+        data = json.loads(message.value.decode("utf-8"))
+        entity_id = data["benchmark_entity"]
+        try:
+            dt = datetime.fromisoformat(data["event_timestamp"])
+            receive_time = dt.timestamp()
+        except (ValueError, TypeError) as e:
+            print(f"⚠️ Invalid event_timestamp: {data.get('event_timestamp')} — {e}")
+            receive_time = time.time()  # fallback
+        # receive_time = time.time()
+        # above line produced negative latencies, as the spark ingestor may receive the messages earlier than the kafka consumer
+
+        if entity_id in seen_entity_ids:
+            if entity_id in duplicate_entity_ids:
+                print(f"⚠️ 2nd time Duplicate entity_id encountered: {entity_id}")
+                continue
+            else:
+                duplicate_entity_ids.add(entity_id)
+                print(f"⚠️ Duplicate entity_id encountered: {entity_id}")
+                continue
+        seen_entity_ids.add(entity_id)
+
+        # Create and start a polling thread per entity
+        t = threading.Thread(
+            target=poll_single_entity,
+            args=(entity_id, receive_time),
+            daemon=True
+        )
+        polling_threads.append(t)
+        t.start()
+
+        if len(seen_entity_ids) >= BENCHMARK_ROWS:
+            print(f"🛑 Reached {BENCHMARK_ROWS} unique entity IDs")
+            break
+
+    if duplicate_entity_ids:
+        duplicates_csv = f"/app/logs/duplicates_{RUN_ID}.csv"
+        with open(duplicates_csv, "w") as f:
+            f.write("entity_id\n")
+            for dup in sorted(duplicate_entity_ids):
+                f.write(f"{dup}\n")
+        print(f"📁 Duplicates written to {duplicates_csv}")
+
+def poll_single_entity(entity_id, receive_time):
+    entity_row = [{"benchmark_entity": entity_id}]
+    while True:
+        updated = store.get_online_features(
+            features=["feature_sum:sum"],
+            entity_rows=entity_row
+        ).to_dict()
+
+        feature_val = updated["sum"][0]
+        if feature_val is not None:
+            retrieve_time = time.time()
+            latency = retrieve_time - receive_time
+            result_queue.put({
+                "entity_id": entity_id,
+                "receive_timestamp": round(receive_time, 6),
+                "retrieval_timestamp": round(retrieve_time, 6),
+                "consumer_latency": round(latency, 4)
+            })
+            break
+
+        time.sleep(0.1)
+
+def consume_kafka_messages_grouped():
+    consumer = KafkaConsumer(
+        BENCHMARK_TOPIC,
+        bootstrap_servers=KAFKA_BROKERS,
+        auto_offset_reset='latest',
         group_id=GROUP_ID
     )
 
@@ -92,6 +169,10 @@ def consume_kafka_messages():
         receive_time = time.time()
         data = json.loads(message.value.decode("utf-8"))
         entity_id = data["benchmark_entity"]
+
+        if len(seen_entity_ids) >= BENCHMARK_ROWS:
+            print(f"🛑 Reached {BENCHMARK_ROWS} unique entity IDs")
+            break
         if entity_id in seen_entity_ids:
             duplicate_entity_ids.add(entity_id)
             print(f"⚠️ Duplicate entity_id encountered: {entity_id}")
@@ -114,10 +195,6 @@ def consume_kafka_messages():
                     daemon=True
                 ).start()
 
-        if len(seen_entity_ids) >= BENCHMARK_ROWS:
-            print(f"🛑 Reached {BENCHMARK_ROWS} unique entity IDs")
-            break
-
     if duplicate_entity_ids:
         duplicates_csv = f"/app/logs/duplicates_{RUN_ID}.csv"
         with open(duplicates_csv, "w") as f:
@@ -128,14 +205,13 @@ def consume_kafka_messages():
     else:
         print("✅ No duplicate entity_ids encountered.")
 
-
 if __name__ == "__main__":
     # Create CSV file if missing
     if not os.path.exists(CSV_PATH):
         with open(CSV_PATH, "w", newline="") as f:
             writer = csv.DictWriter(f, fieldnames=[
                 "entity_id", "receive_timestamp", "retrieval_timestamp", "consumer_latency"
-            ])
+            ],delimiter=";")
             writer.writeheader()
 
     # Start logging thread
@@ -143,9 +219,12 @@ if __name__ == "__main__":
     logger_thread.start()
 
     try:
-        consume_kafka_messages()
+        consume_kafka_messages_individual_polling()
     except KeyboardInterrupt:
         print("Stopping...")
+
+    for t in polling_threads:
+        t.join()
 
     # Clean shutdown
     result_queue.put("STOP")
