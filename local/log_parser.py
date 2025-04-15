@@ -36,3 +36,5 @@ def parse_spark_ingestor_log(input_filename= "spark_ingestor.log", output_filena
 
     # Save to CSV (optional)
     df_spark_log.to_csv(output_filename, index=False)
+
+parse_spark_ingestor_log()
