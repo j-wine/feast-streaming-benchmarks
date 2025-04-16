@@ -25,33 +25,37 @@ current_group = []
 group_times = []
 group_lock = threading.Lock()
 result_queue = Queue()
+group_produce_times = []
+def schedule_polling(entities, receive_times, produce_times):
+    """Poll a group of entities and log each result individually into result_queue."""
+    entity_rows = [{"benchmark_entity": eid} for eid in entities]
 
-# def schedule_polling(entities, receive_times):
-#     """Polling thread: polls until all entities have data, puts results into queue."""
-#     entity_rows = [{"benchmark_entity": eid} for eid in entities]
-#     retrieved = {eid: False for eid in entities}
-#
-#     while not all(retrieved.values()):
-#         updated = store.get_online_features(
-#             features=["feature_sum:sum"],
-#             entity_rows=entity_rows
-#         ).to_dict()
-#
-#         ids = updated["benchmark_entity"]
-#         values = updated["sum"]
-#
-#         for i, entity_id in enumerate(ids):
-#             if values[i] is not None and not retrieved[entity_id]:
-#                 retrieve_time = time.time()
-#                 result_queue.put({
-#                     "entity_id": entity_id,
-#                     "receive_timestamp": round(receive_times[i], 6),
-#                     "retrieval_timestamp": round(retrieve_time, 6),
-#
-#                 })
-#                 retrieved[entity_id] = True
-#
-#         time.sleep(0.1)
+    # Create dictionaries to map entity_id → times
+    receive_map = dict(zip(entities, receive_times))
+    produce_map = dict(zip(entities, produce_times))
+    retrieved = {eid: False for eid in entities}
+
+    while not all(retrieved.values()):
+        updated = store.get_online_features(
+            features=["feature_sum:sum"],
+            entity_rows=entity_rows
+        ).to_dict()
+
+        ids = updated["benchmark_entity"]
+        values = updated["sum"]
+
+        for i, entity_id in enumerate(ids):
+            if values[i] is not None and not retrieved[entity_id]:
+                retrieve_time = time.time()
+                result_queue.put({
+                    "entity_id": entity_id,
+                    "produce_timestamp": round(produce_map[entity_id], 6),
+                    "receive_timestamp": round(receive_map[entity_id], 6),
+                    "retrieval_timestamp": round(retrieve_time, 6),
+                })
+                retrieved[entity_id] = True
+
+        time.sleep(0.1)
 
 
 def write_results_from_queue():
@@ -150,56 +154,78 @@ def poll_single_entity(entity_id, receive_time, produce_time):
             })
             break
         time.sleep(0.1)
-# def consume_kafka_messages_grouped():
-#     consumer = KafkaConsumer(
-#         BENCHMARK_TOPIC,
-#         bootstrap_servers=KAFKA_BROKERS,
-#         auto_offset_reset='latest',
-#         group_id=GROUP_ID
-#     )
-#
-#     print("🚀 Consuming Kafka messages...")
-#     seen_entity_ids = set()
-#     duplicate_entity_ids = set()
-#     for message in consumer:
-#         receive_time = time.time()
-#         data = json.loads(message.value.decode("utf-8"))
-#         entity_id = data["benchmark_entity"]
-#
-#         if len(seen_entity_ids) >= BENCHMARK_ROWS:
-#             print(f"🛑 Reached {BENCHMARK_ROWS} unique entity IDs")
-#             break
-#         if entity_id in seen_entity_ids:
-#             duplicate_entity_ids.add(entity_id)
-#             print(f"⚠️ Duplicate entity_id encountered: {entity_id}")
-#             continue
-#         seen_entity_ids.add(entity_id)
-#
-#         with group_lock:
-#             current_group.append(entity_id)
-#             group_times.append(receive_time)
-#
-#             if len(current_group) >= GROUP_SIZE:
-#                 entities = current_group.copy()
-#                 times = group_times.copy()
-#                 current_group.clear()
-#                 group_times.clear()
-#
-#                 threading.Thread(
-#                     target=schedule_polling,
-#                     args=(entities, times),
-#                     daemon=True
-#                 ).start()
-#
-#     if duplicate_entity_ids:
-#         duplicates_csv = f"/app/logs/duplicates_{RUN_ID}.csv"
-#         with open(duplicates_csv, "w") as f:
-#             f.write("entity_id\n")
-#             for dup in sorted(duplicate_entity_ids):
-#                 f.write(f"{dup}\n")
-#         print(f"📁 Duplicates written to {duplicates_csv}")
-#     else:
-#         print("✅ No duplicate entity_ids encountered.")
+def consume_kafka_messages_grouped():
+    consumer = KafkaConsumer(
+        BENCHMARK_TOPIC,
+        bootstrap_servers=KAFKA_BROKERS,
+        auto_offset_reset='latest',
+        group_id=GROUP_ID
+    )
+
+    print("🚀 Consuming Kafka messages (grouped polling)...")
+    seen_entity_ids = set()
+    duplicate_entity_ids = set()
+
+    for message in consumer:
+        data = json.loads(message.value.decode("utf-8"))
+        entity_id = data["benchmark_entity"]
+        receive_time = time.time()
+
+        try:
+            dt = datetime.fromisoformat(data["event_timestamp"])
+            produce_time = dt.timestamp()
+        except (ValueError, TypeError) as e:
+            print(f"⚠️ Invalid event_timestamp: {data.get('event_timestamp')} — {e}")
+            produce_time = time.time()
+
+        if entity_id in seen_entity_ids:
+            if entity_id in duplicate_entity_ids:
+                print(f"⚠️ 2nd time Duplicate entity_id encountered: {entity_id}")
+                continue
+            else:
+                duplicate_entity_ids.add(entity_id)
+                print(f"⚠️ Duplicate entity_id encountered: {entity_id}")
+                continue
+
+        seen_entity_ids.add(entity_id)
+
+        with group_lock:
+            current_group.append(entity_id)
+            group_times.append(receive_time)
+            group_produce_times.append(produce_time)
+
+            if len(current_group) >= GROUP_SIZE:
+                # Capture group
+                entities = current_group.copy()
+                receive_times = group_times.copy()
+                produce_times = group_produce_times.copy()
+
+                # Reset group
+                current_group.clear()
+                group_times.clear()
+                group_produce_times.clear()
+
+                t = threading.Thread(
+                    target=schedule_polling,
+                    args=(entities, receive_times, produce_times),
+                    daemon=True
+                )
+                polling_threads.append(t)
+                t.start()
+
+        if len(seen_entity_ids) >= BENCHMARK_ROWS:
+            print(f"🛑 Reached {BENCHMARK_ROWS} unique entity IDs")
+            break
+
+    if duplicate_entity_ids:
+        duplicates_csv = f"/app/logs/duplicates_{RUN_ID}.csv"
+        with open(duplicates_csv, "w") as f:
+            f.write("entity_id\n")
+            for dup in sorted(duplicate_entity_ids):
+                f.write(f"{dup}\n")
+        print(f"📁 Duplicates written to {duplicates_csv}")
+    else:
+        print("✅ No duplicate entity_ids encountered.")
 
 if __name__ == "__main__":
     # Create CSV file if missing
@@ -215,7 +241,7 @@ if __name__ == "__main__":
     logger_thread.start()
 
     try:
-        consume_kafka_messages_individual_polling()
+        consume_kafka_messages_grouped()
     except KeyboardInterrupt:
         print("Stopping...")
 
