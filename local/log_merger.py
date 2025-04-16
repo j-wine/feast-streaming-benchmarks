@@ -1,18 +1,33 @@
-import pandas as pd
-import os
-import sys
 from datetime import datetime
-import pandas as pd
-import sys
-from datetime import datetime
+from datetime import timedelta
 
-def format_hms_milliseconds(ts):
+import pandas as pd
+
+
+def format_timestamp_hms_milliseconds(ts):
     try:
-        dt = datetime.fromtimestamp(float(ts) / 1_000_000)  # convert from micro/nanoseconds if needed
-        return dt.strftime("%H:%M:%S") + f":{int(dt.microsecond / 1000):03d}"
+        ts = float(ts)
+        dt = datetime.fromtimestamp(ts)
+        milliseconds = int((ts % 1) * 1000)
+        return dt.strftime("%H:%M:%S") + f":{milliseconds:03d}"
     except Exception as e:
-        print(f"Failed to parse timestamp {ts}: {e}")
+        print(f"⚠️ Failed to parse timestamp {ts}: {e}")
         return ""
+
+def format_duration(ts):
+    """Format duration (seconds) to HH:MM:SS:MS, no timezone bias."""
+    try:
+        ts = float(ts)
+        td = timedelta(seconds=ts)
+        total_seconds = int(td.total_seconds())
+        hours, remainder = divmod(total_seconds, 3600)
+        minutes, seconds = divmod(remainder, 60)
+        milliseconds = int((ts % 1) * 1000)
+        return f"{hours:02d}:{minutes:02d}:{seconds:02d}:{milliseconds:03d}"
+    except Exception as e:
+        print(f"⚠️ Failed to format duration {ts}: {e}")
+        return ""
+
 
 def merge_and_compute_latencies(spark_csv_path, kafka_csv_path, output_csv="merged_with_latency.csv"):
     # Load CSVs
@@ -25,24 +40,24 @@ def merge_and_compute_latencies(spark_csv_path, kafka_csv_path, output_csv="merg
 
     # Merge on entity_id (inner join to skip mismatches)
     merged_df = pd.merge(spark_df, kafka_df, on="entity_id", how="inner")
-
-    # Calculate latency metrics
-    merged_df["preprocess_until_poll"] = merged_df["retrieval_timestamp"] - merged_df["spark_ingestion_time"]
-    merged_df["preprocess_latency"] = merged_df["spark_ingestion_time"] - merged_df["receive_timestamp"]
-    merged_df["diff_preprocess"] = merged_df["preprocess_until_poll"] - merged_df["preprocess_latency"]
-
-    # Apply time formatting to all relevant columns
+    # add human hour:minute:second form of timestamps
     for col in [
         "spark_ingestion_time",
         "receive_timestamp",
         "retrieval_timestamp",
-        "preprocess_until_poll",
-        "preprocess_latency",
-        "diff_preprocess"
+        "produce_timestamp",
     ]:
-        merged_df[col + "_hms"] = merged_df[col].apply(format_hms_milliseconds)
+        merged_df[col + "_hms"] = merged_df[col].apply(format_timestamp_hms_milliseconds)
+    # Calculate latency metrics (durations)
+    # durations are already formatted in seconds
+    merged_df["preprocess_until_poll"] = merged_df["retrieval_timestamp"] - merged_df["spark_ingestion_time"]
+    # the kafka consumer receive timestamp is sometimes later than spark ingest
+    # therefore is sometimes negative value, causing parsing error
+    # merged_df["receive_to_ingestor"] = merged_df["spark_ingestion_time"] - merged_df["receive_timestamp"]
+    merged_df["produce_to_ingest"] = merged_df["spark_ingestion_time"] - merged_df["produce_timestamp"]
+    merged_df["produce_to_receive"] = merged_df["receive_timestamp"] - merged_df["produce_timestamp"]
+    merged_df["produce_to_retrieve"] = merged_df["retrieval_timestamp"] - merged_df["produce_timestamp"]
 
-    # Save to CSV
     merged_df.to_csv(output_csv, index=False)
     print(f"✅ Merged file saved as '{output_csv}'")
 

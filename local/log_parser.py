@@ -3,7 +3,7 @@ import pandas as pd
 from datetime import datetime
 
 
-def parse_spark_ingestor_log(input_filename= "spark_ingestor.log", output_filename= "parsed_spark_ingestion_log.csv"):
+def parse_spark_ingestor_log(input_filename= "spark_log.csv", output_filename= "parsed_spark_ingestion_log.csv"):
 
     # Load your spark log (adjust path as needed)
     with open(input_filename, "r") as f:
