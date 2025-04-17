@@ -7,17 +7,24 @@ from kafka import KafkaProducer
 
 import timing_helper
 
+# --- Parameters ---
+BENCHMARK_ROWS = 100_000
+BENCHMARK_FEATURES = 10  # Number of features to include per entity
+
 BENCHMARK_TOPIC = "benchmark_entity_topic"
 KAFKA_BROKERS = ["broker-1:9092"]
-
 ENTITY_PER_SECOND = 1000
-PROCESSING_START=30
+PROCESSING_START = 30
 
 def read_benchmark_data():
     parquet_file = Path(__file__).parent / "offline_data/generated_data.parquet"
     df = pd.read_parquet(parquet_file)
-    df = df.sort_values("benchmark_entity")  # Sorting the DataFrame by 'benchmark_entity'
-    return df
+    df = df.sort_values("benchmark_entity")
+
+    feature_cols = [f"feature_{i}" for i in range(BENCHMARK_FEATURES)]
+    selected_cols = ["benchmark_entity", "event_timestamp"] + feature_cols
+    df = df[selected_cols].copy()
+    return df.head(BENCHMARK_ROWS)
 
 def produce_kafka_messages():
     producer = KafkaProducer(
@@ -26,34 +33,27 @@ def produce_kafka_messages():
     )
 
     benchmark_df = read_benchmark_data()
-    benchmark_iter = iter(benchmark_df.itertuples(index=False, name=None))
-    print("Writing benchmark data to kafka...")
-    timing_helper.wait_until_second(PROCESSING_START)
-    while True:
-        try:
-            benchmark_data = next(benchmark_iter)
-            benchmark_entity = {
-                "benchmark_entity": benchmark_data[0],
-                # "event_timestamp": benchmark_data[1].isoformat(),
-                "event_timestamp": datetime.datetime.utcnow().isoformat(),
-                "feature_0": benchmark_data[2],
-                "feature_1": benchmark_data[3],
-                "feature_2": benchmark_data[4],
-                "feature_3": benchmark_data[5],
-                "feature_4": benchmark_data[6],
-                "feature_5": benchmark_data[7],
-                "feature_6": benchmark_data[8],
-                "feature_7": benchmark_data[9],
-                "feature_8": benchmark_data[10],
-                "feature_9": benchmark_data[11]
-            }
-            producer.send(BENCHMARK_TOPIC, benchmark_entity)
-            print(f"Sent Benchmark Data: {benchmark_entity}")
-        except StopIteration:
-            print("All benchmark entities have been sent.")
-            break
+    feature_columns = [f"feature_{i}" for i in range(BENCHMARK_FEATURES)]
 
-        time.sleep(1 / ENTITY_PER_SECOND ) # produce x messages per second
+    print("Writing benchmark data to Kafka...")
+    timing_helper.wait_until_second(PROCESSING_START)
+
+    for row in benchmark_df.itertuples(index=False):
+        benchmark_entity = {
+            "benchmark_entity": getattr(row, "benchmark_entity"),
+            "event_timestamp": datetime.datetime.utcnow().isoformat()
+        }
+
+        # Include only the configured number of features
+        for feature in feature_columns:
+            benchmark_entity[feature] = getattr(row, feature)
+
+        producer.send(BENCHMARK_TOPIC, benchmark_entity)
+        print(f"Sent Benchmark Data: {benchmark_entity}")
+
+        time.sleep(1 / ENTITY_PER_SECOND)
+
+    print("All benchmark entities have been sent.")
 
 if __name__ == "__main__":
     produce_kafka_messages()
