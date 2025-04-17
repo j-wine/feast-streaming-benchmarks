@@ -24,7 +24,7 @@ def compute_latency_stats(csv_path, column):
     return stats
 
 
-def plot_latency_stats(stats, title="Latency Stats (100 EPS, 1s Interval)", output_file="latency_stats.png"):
+def plot_latency_stats(stats, is_grouped, eps, interval, rows, input_features, output_features, output_file=None):
     labels = list(stats.keys())
     values = list(stats.values())
 
@@ -35,7 +35,10 @@ def plot_latency_stats(stats, title="Latency Stats (100 EPS, 1s Interval)", outp
 
     plt.xticks(x, labels)
     plt.ylabel("Latency (seconds)")
+    poll_mode = "Grouped Poll" if is_grouped else "Single Poll"
+    title = f"{poll_mode} — {eps} EPS, {interval}s Interval, {rows} Rows, {input_features} Input Features, {output_features} Output Features"
     plt.title(title)
+    print(title)
 
     for i, bar in enumerate(bars):
         yval = bar.get_height()
@@ -43,13 +46,16 @@ def plot_latency_stats(stats, title="Latency Stats (100 EPS, 1s Interval)", outp
 
     plt.tight_layout()
     plt.grid(axis='y', linestyle='--', alpha=0.7)
+    if output_file is None:
+        mode = "grouped" if is_grouped else "single"
+        output_file = f"lat_{mode}_{eps}eps_{interval}s_{rows}rows_{input_features}in_{output_features}out.png"
+
     plt.savefig(output_file)
     plt.show()
 
 
-# === USAGE ===
-csv_path = "merged_log.csv"  # Adjust if needed
+csv_path = "merged_log.csv"
 column = "preprocess_until_poll"
 
 latency_stats = compute_latency_stats(csv_path, column)
-plot_latency_stats(latency_stats)
+plot_latency_stats(latency_stats, False,1000, 1, 100_000, 10, 1)
