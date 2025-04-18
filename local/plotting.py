@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+from datetime import datetime
 
 
 def compute_latency_stats(csv_path, column):
@@ -21,7 +22,7 @@ def compute_latency_stats(csv_path, column):
         "p99": latencies.quantile(0.99),
         "max": latencies.max(),
     }
-    return stats
+    return stats, df
 
 
 def plot_latency_stats(stats, is_grouped, eps, interval, rows, input_features, output_features, output_file=None):
@@ -46,6 +47,7 @@ def plot_latency_stats(stats, is_grouped, eps, interval, rows, input_features, o
 
     plt.tight_layout()
     plt.grid(axis='y', linestyle='--', alpha=0.7)
+
     if output_file is None:
         mode = "grouped" if is_grouped else "single"
         output_file = f"lat_{mode}_{eps}eps_{interval}s_{rows}rows_{input_features}in_{output_features}out.png"
@@ -54,8 +56,40 @@ def plot_latency_stats(stats, is_grouped, eps, interval, rows, input_features, o
     plt.show()
 
 
+def plot_latency_over_time(df, is_grouped, eps, interval, rows, input_features, output_features, output_file=None):
+    df = df[df["preprocess_until_poll"] >= 0].copy()
+    df["spark_ingestion_time"] = df["spark_ingestion_time"].astype(str).str.replace(",", ".").astype(float)
+    df["spark_ingestion_dt"] = df["spark_ingestion_time"].apply(datetime.fromtimestamp)
+
+    plt.figure(figsize=(12, 6))
+    plt.plot(df["spark_ingestion_dt"], df["preprocess_until_poll"], linestyle='-', marker='.', alpha=0.5)
+    plt.xlabel("Spark Ingestion Time")
+    plt.ylabel("Latency (seconds)")
+    poll_mode = "Grouped Poll" if is_grouped else "Single Poll"
+    title = f"{poll_mode} — Latency Over Time ({eps} EPS, {interval}s Interval)"
+    plt.title(title)
+    plt.grid(True)
+
+    if output_file is None:
+        mode = "grouped" if is_grouped else "single"
+        output_file = f"time_{mode}_{eps}eps_{interval}s_{rows}rows_{input_features}in_{output_features}out.png"
+
+    plt.tight_layout()
+    plt.savefig(output_file)
+    plt.show()
+
+
+# ==== MAIN ====
 csv_path = "merged_log.csv"
 column = "preprocess_until_poll"
+eps = 500
+interval = 1
+rows = 10_000
+input_features = 10
+output_features = 1
+is_grouped = True
 
-latency_stats = compute_latency_stats(csv_path, column)
-plot_latency_stats(latency_stats, False,1000, 1, 100_000, 10, 1)
+latency_stats, df_filtered = compute_latency_stats(csv_path, column)
+
+plot_latency_stats(latency_stats, is_grouped, eps, interval, rows, input_features, output_features)
+plot_latency_over_time(df_filtered, is_grouped, eps, interval, rows, input_features, output_features)
