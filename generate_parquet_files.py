@@ -21,6 +21,6 @@ if __name__ == "__main__":
     output_path = Path(__file__).parent / "feature_repo/offline_data/generated_data.parquet"
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    df = generate_data(num_entities=10_000, num_features=10)
+    df = generate_data(num_entities=100_000, num_features=250)
     df.to_parquet(output_path, index=False)
     print(f"✅ Generated {output_path}")

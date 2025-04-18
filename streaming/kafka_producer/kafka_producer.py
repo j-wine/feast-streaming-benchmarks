@@ -8,13 +8,13 @@ from kafka import KafkaProducer
 import timing_helper
 
 # --- Parameters ---
-BENCHMARK_ROWS = 100_000
-BENCHMARK_FEATURES = 10  # Number of features to include per entity
+BENCHMARK_ROWS = 10_000 # Number of datapoints send
+ENTITY_PER_SECOND = 500
+BENCHMARK_FEATURES = 100  # Number of features to include per entity
 
 BENCHMARK_TOPIC = "benchmark_entity_topic"
 KAFKA_BROKERS = ["broker-1:9092"]
-ENTITY_PER_SECOND = 1000
-PROCESSING_START = 30
+PROCESSING_START = 30 # second of the minute to start sending
 
 def read_benchmark_data():
     parquet_file = Path(__file__).parent / "offline_data/generated_data.parquet"
@@ -29,9 +29,8 @@ def read_benchmark_data():
 def produce_kafka_messages():
     producer = KafkaProducer(
         bootstrap_servers=KAFKA_BROKERS,
-        value_serializer=lambda v: json.dumps(v).encode('utf-8')
-    )
-
+        value_serializer=lambda v: json.dumps(v).encode('utf-8'),
+        acks='all')
     benchmark_df = read_benchmark_data()
     feature_columns = [f"feature_{i}" for i in range(BENCHMARK_FEATURES)]
 

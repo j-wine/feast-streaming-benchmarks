@@ -47,7 +47,7 @@ ingestion_config = SparkProcessorConfig(
 )
 
 # Fetch stream feature view
-traffic_light_windowed_features = store.get_stream_feature_view("feature_sum")
+traffic_light_windowed_features = store.get_stream_feature_view("hundred_features_sum")
 
 # Initialize stream processor
 processor = get_stream_processor_object(
