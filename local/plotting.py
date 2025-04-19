@@ -1,3 +1,5 @@
+import os
+
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -52,7 +54,8 @@ def plot_latency_stats(stats, is_grouped, eps, interval, rows, input_features, o
         mode = "grouped" if is_grouped else "single"
         output_file = f"{online_store}_lat_{mode}_{eps}eps_{interval}s_{rows}rows_{input_features}in_{output_features}out.png"
 
-    plt.savefig(output_file)
+    full_path = os.path.join("plots", output_file)
+    plt.savefig(full_path)
     plt.show()
 
 
@@ -75,20 +78,21 @@ def plot_latency_over_time(df, is_grouped, eps, interval, rows, input_features, 
         output_file = f"{online_store}_time_{mode}_{eps}eps_{interval}s_{rows}rows_{input_features}in_{output_features}out.png"
 
     plt.tight_layout()
-    plt.savefig(output_file)
+    full_path = os.path.join("plots", output_file)
+    plt.savefig(full_path)
     plt.show()
 
 if __name__ == "__main__":
     # ==== MAIN ====
     csv_path = "merged_log.csv"
     column = "preprocess_until_poll"
-    eps = 100
+    eps = 1000
     interval = 1
     rows = 10_000
-    input_features = 10
-    output_features = 1
+    input_features = 100
+    output_features = 100
     is_grouped = True
-
+    online_store = "redis,no offline"
     latency_stats, df_filtered = compute_latency_stats(csv_path, column)
 
     plot_latency_stats(latency_stats, is_grouped, eps, interval, rows, input_features, output_features,online_store)
