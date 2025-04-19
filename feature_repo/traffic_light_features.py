@@ -6,7 +6,7 @@ from feast.types import Int64
 from pyspark.sql import DataFrame
 
 from entities import benchmark_entity
-from feature_repo.data_sources import benchmark_stream_source, hundred_features_benchmark_stream_source
+from data_sources import benchmark_stream_source, hundred_features_benchmark_stream_source
 
 
 @stream_feature_view(

@@ -32,7 +32,7 @@ benchmark_stream_source = KafkaSource(
 )
 
 hundred_features_benchmark_stream_source = KafkaSource(
-    name="benchmark_stream_source",
+    name="hundred_features_benchmark_stream_source",
     kafka_bootstrap_servers="broker-1:9092",
     topic=BENCHMARK_TOPIC,
     timestamp_field="event_timestamp",

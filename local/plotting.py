@@ -78,18 +78,18 @@ def plot_latency_over_time(df, is_grouped, eps, interval, rows, input_features, 
     plt.savefig(output_file)
     plt.show()
 
+if __name__ == "__main__":
+    # ==== MAIN ====
+    csv_path = "merged_log.csv"
+    column = "preprocess_until_poll"
+    eps = 100
+    interval = 1
+    rows = 10_000
+    input_features = 100
+    output_features = 100
+    is_grouped = True
 
-# ==== MAIN ====
-csv_path = "merged_log.csv"
-column = "preprocess_until_poll"
-eps = 100
-interval = 1
-rows = 10_000
-input_features = 100
-output_features = 100
-is_grouped = True
+    latency_stats, df_filtered = compute_latency_stats(csv_path, column)
 
-latency_stats, df_filtered = compute_latency_stats(csv_path, column)
-
-plot_latency_stats(latency_stats, is_grouped, eps, interval, rows, input_features, output_features)
-plot_latency_over_time(df_filtered, is_grouped, eps, interval, rows, input_features, output_features)
+    plot_latency_stats(latency_stats, is_grouped, eps, interval, rows, input_features, output_features)
+    plot_latency_over_time(df_filtered, is_grouped, eps, interval, rows, input_features, output_features)

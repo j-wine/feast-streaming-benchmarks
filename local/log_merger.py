@@ -130,9 +130,9 @@ def merge_and_compute_latencies(spark_csv_path, kafka_csv_path, output_csv="merg
     # Save to CSV with semicolon delimiter
     merged_df.to_csv(output_csv, sep=';', index=False)
 
-
-consumer_csv_path = "../logs/kafka_latency_log.csv"
-spark_csv_path = "parsed_spark_ingestion_log.csv"
-output_path = "merged_log.csv"
-parse_spark_ingestor_log()
-merge_and_compute_latencies(spark_csv_path, consumer_csv_path,output_path)
+if __name__ == "__main__":
+    consumer_csv_path = "../logs/kafka_latency_log.csv"
+    spark_csv_path = "parsed_spark_ingestion_log.csv"
+    output_path = "merged_log.csv"
+    parse_spark_ingestor_log()
+    merge_and_compute_latencies(spark_csv_path, consumer_csv_path,output_path)
