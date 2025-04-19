@@ -85,9 +85,10 @@ if __name__ == "__main__":
     eps = 100
     interval = 1
     rows = 10_000
-    input_features = 10
-    output_features = 1
+    input_features = 100
+    output_features = 100
     is_grouped = True
+    online_store = "postgres"
 
     latency_stats, df_filtered = compute_latency_stats(csv_path, column)
 

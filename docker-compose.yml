@@ -9,7 +9,7 @@ services:
     depends_on:
       registry:
         condition: service_healthy
-      redis:
+      postgres_online:
         condition: service_started
       dask-worker:
         condition: service_started
@@ -102,13 +102,23 @@ services:
       interval: 5s
       retries: 5
 
-  redis:
-    image: redis
-    container_name: redis
+  postgres_online:
+    container_name: postgres_online
+    image: postgres:17-alpine
+    environment:
+      - POSTGRES_USER=feast
+      - POSTGRES_PASSWORD=feastpw
+      - POSTGRES_DB=feast_online
     ports:
-      - "6379:6379"
-    command: redis-server --maxmemory 4gb --maxmemory-policy allkeys-lru
+      - "55002:5432"
+    volumes:
+      - ./feast-postgres-online:/var/lib/postgresql/data
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "feast"]
+      interval: 5s
+      retries: 5
+
 
   dask-scheduler:
     image: ghcr.io/dask/dask:latest
