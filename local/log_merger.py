@@ -18,6 +18,7 @@ def parse_spark_ingestor_log(input_filename="spark_log", output_filename="parsed
     matches = re.finditer(pattern, spark_log)
 
     for match in matches:
+        print(f"matches: {match}")
         timestamp_str = match.group(1)
         entity_ids_str = match.group(2)
 

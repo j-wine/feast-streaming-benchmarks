@@ -82,11 +82,11 @@ def plot_latency_over_time(df, is_grouped, eps, interval, rows, input_features, 
 # ==== MAIN ====
 csv_path = "merged_log.csv"
 column = "preprocess_until_poll"
-eps = 500
+eps = 100
 interval = 1
 rows = 10_000
-input_features = 10
-output_features = 1
+input_features = 100
+output_features = 100
 is_grouped = True
 
 latency_stats, df_filtered = compute_latency_stats(csv_path, column)

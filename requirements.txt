@@ -12,6 +12,6 @@ pyspark==3.5.0
 jsonschema
 distributed==2024.4.1
 dask[dataframe]==2024.4.1
-feast[postgres,redis,dask]==0.46.0
+feast[postgres,redis,dask]==0.47.0
 redis>=4.2.2,<5
 hiredis>=2.0.0,<3

@@ -10,6 +10,13 @@ from pyspark.sql import SparkSession
 JAVA_HOME = os.getenv("JAVA_HOME")
 SPARK_HOME = os.getenv("SPARK_HOME")
 
+
+SFV_10_FEATURES_SUM = "feature_sum"
+SFV_100_FEATURES_SUM = "hundred_features_sum"
+SFV_100_FEATURES_SUM_100 = "hundred_features_all_sum"
+# sfv to ingest
+STREAM_FEATURE_VIEW = SFV_100_FEATURES_SUM_100
+# second of the minute for producer to start sending. not longer needed when we send one meaningless  message to init topic
 PROCESSING_START=30
 
 # Ensure PySpark is properly configured with Kafka support
@@ -47,7 +54,7 @@ ingestion_config = SparkProcessorConfig(
 )
 
 # Fetch stream feature view
-traffic_light_windowed_features = store.get_stream_feature_view("hundred_features_sum")
+traffic_light_windowed_features = store.get_stream_feature_view(STREAM_FEATURE_VIEW)
 
 # Initialize stream processor
 processor = get_stream_processor_object(

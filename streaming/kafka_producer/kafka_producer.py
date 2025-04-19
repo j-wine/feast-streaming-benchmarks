@@ -4,17 +4,36 @@ import datetime
 from pathlib import Path
 import pandas as pd
 from kafka import KafkaProducer
+from kafka.errors import UnknownTopicOrPartitionError, KafkaError
 
 import timing_helper
 
 # --- Parameters ---
 BENCHMARK_ROWS = 10_000 # Number of datapoints send
-ENTITY_PER_SECOND = 500
+ENTITY_PER_SECOND = 100
 BENCHMARK_FEATURES = 100  # Number of features to include per entity
 
 BENCHMARK_TOPIC = "benchmark_entity_topic"
 KAFKA_BROKERS = ["broker-1:9092"]
 PROCESSING_START = 30 # second of the minute to start sending
+
+def wait_for_kafka_topic(producer, topic, retries=150, delay=0.1):
+    dummy_message = {"check": "ping"}
+    for i in range(retries):
+        try:
+            print(f"⏳ Checking if topic '{topic}' is ready... Attempt {i+1}/{retries}")
+            future = producer.send(topic, value=dummy_message)
+            future.get(timeout=5)
+            print(f"✅ Kafka topic '{topic}' is ready.")
+            return
+        except UnknownTopicOrPartitionError:
+            print("❌ Topic not found yet. Waiting...")
+            time.sleep(delay)
+        except KafkaError as e:
+            print(f"⚠️ Kafka error: {e}. Retrying...")
+            time.sleep(delay)
+    raise RuntimeError(f"❌ Kafka topic '{topic}' not available after {retries} attempts.")
+
 
 def read_benchmark_data():
     parquet_file = Path(__file__).parent / "offline_data/generated_data.parquet"
@@ -31,6 +50,8 @@ def produce_kafka_messages():
         bootstrap_servers=KAFKA_BROKERS,
         value_serializer=lambda v: json.dumps(v).encode('utf-8'),
         acks='all')
+    wait_for_kafka_topic(producer, BENCHMARK_TOPIC)
+
     benchmark_df = read_benchmark_data()
     feature_columns = [f"feature_{i}" for i in range(BENCHMARK_FEATURES)]
 

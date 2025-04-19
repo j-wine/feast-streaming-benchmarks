@@ -14,6 +14,7 @@ RUN pip install --upgrade pip && pip install -r requirements.txt
 
 ENV PYTHONWARNINGS="ignore"
 
+COPY timing_helper.py /app/
 COPY kafka_consumer.py /app/
 COPY feature_store.yaml /app/
 WORKDIR /app
