@@ -4,6 +4,18 @@ registry:
   registry_type: sql
   path: postgresql+psycopg://postgres:mysecretpassword@registry:5432/feast
 online_store:
-  type: redis
-  connection_string: host.docker.internal:6379
+  type: cassandra
+  hosts:
+    - cassandra
+  keyspace: feast_online
+  port: 9042
+  username: cassandra
+  password: cassandra
+  protocol_version: 4
+  load_balancing:
+    local_dc: datacenter1
+    load_balancing_policy: 'TokenAwarePolicy(DCAwareRoundRobinPolicy)'
+  read_concurrency: 100
+  write_concurrency: 100
 entity_key_serialization_version: 2
+

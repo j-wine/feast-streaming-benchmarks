@@ -9,8 +9,9 @@ services:
     depends_on:
       registry:
         condition: service_healthy
-      redis:
+      cassandra:
         condition: service_started
+
     ports:
       - "6566:6566"
     links:
@@ -100,13 +101,37 @@ services:
       interval: 5s
       retries: 5
 
-  redis:
-    image: redis
-    container_name: redis
+  cassandra:
+    image: cassandra:4.1
+    container_name: cassandra
     ports:
-      - "6379:6379"
-    command: redis-server --maxmemory 4gb --maxmemory-policy allkeys-lru
+      - "9042:9042"
+    environment:
+      - CASSANDRA_CLUSTER_NAME=feast-cluster
+      - CASSANDRA_DC=datacenter1
+      - CASSANDRA_KEYSPACE=feast_online
+    volumes:
+      - cassandra_data:/var/lib/cassandra
     restart: unless-stopped
+
+  cassandra-init:
+    image: cassandra:latest
+    depends_on:
+      - cassandra
+    entrypoint: /bin/bash
+    command: >
+      -c "
+      echo '⏳ Waiting for Cassandra...';
+      until cqlsh cassandra 9042 -u cassandra -p cassandra -e 'describe keyspaces'; do
+        sleep 5;
+      done;
+      echo '✅ Cassandra is ready';
+      cqlsh cassandra 9042 -u cassandra -p cassandra -e \"
+        CREATE KEYSPACE IF NOT EXISTS feast_online
+        WITH replication = {'class': 'SimpleStrategy', 'replication_factor': 1};
+      \"
+      "
+
 
   zookeeper:
     image: confluentinc/cp-zookeeper:7.0.1
@@ -136,3 +161,6 @@ services:
       retries: 5
       start_period: 20s
     restart: unless-stopped
+
+volumes:
+  cassandra_data:
