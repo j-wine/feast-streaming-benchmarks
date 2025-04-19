@@ -5,12 +5,12 @@ services:
       context: ./feature_repo
     volumes:
       - ./feature_repo:/app/feature_repo
-      - ./feature_repo/offline_data:/app/offline_data  # ✅ Mounts `offline_data` directly inside `/app/`
+      - ./feature_repo/offline_data:/app/offline_data
+      - ./feature_repo/data:/app/data
+
     depends_on:
       registry:
         condition: service_healthy
-      redis:
-        condition: service_started
       dask-worker:
         condition: service_started
     ports:
@@ -28,6 +28,7 @@ services:
       context: ./streaming/kafka_consumer
     volumes:
       - ./feature_repo/offline_data:/app/offline_data # @BA needed by data_sources.traffic_light_batch_source: FileSource
+      - ./feature_repo/data:/app/data # @BA needed by data_sources.traffic_light_batch_source: FileSource
       - ./logs:/app/logs # access on csv log
     container_name: kafka_consumer
     depends_on:
@@ -48,6 +49,7 @@ services:
       dockerfile: ./Dockerfile
     volumes:
       - ./feature_repo/offline_data:/app/offline_data
+      - ./feature_repo/data:/app/data
     container_name: spark_ingestor
     depends_on:
       broker-1:
@@ -102,14 +104,7 @@ services:
       interval: 5s
       retries: 5
 
-  redis:
-    image: redis
-    container_name: redis
-    ports:
-      - "6379:6379"
-    command: redis-server --maxmemory 4gb --maxmemory-policy allkeys-lru
-    restart: unless-stopped
-
+#
   dask-scheduler:
     image: ghcr.io/dask/dask:latest
     container_name: dask-scheduler

@@ -4,8 +4,8 @@ registry:
   registry_type: sql
   path: postgresql+psycopg://postgres:mysecretpassword@localhost:55001/feast
 online_store:
-  type: redis
-  connection_string: host.docker.internal:6379
+  type: sqlite
+  path: ../feature_repo/data/online_store.db
 offline_store:
   type: dask
 entity_key_serialization_version: 2
