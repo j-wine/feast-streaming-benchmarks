@@ -15,7 +15,7 @@ SFV_10_FEATURES_SUM = "feature_sum"
 SFV_100_FEATURES_SUM = "hundred_features_sum"
 SFV_100_FEATURES_SUM_100 = "hundred_features_all_sum"
 # sfv to ingest
-STREAM_FEATURE_VIEW = SFV_100_FEATURES_SUM_100
+STREAM_FEATURE_VIEW = SFV_10_FEATURES_SUM
 # second of the minute for producer to start sending. not longer needed when we send one meaningless  message to init topic
 PROCESSING_START=30
 

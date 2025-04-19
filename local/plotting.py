@@ -88,7 +88,7 @@ if __name__ == "__main__":
     input_features = 100
     output_features = 100
     is_grouped = True
-
+    online_store = "dragonfly"
     latency_stats, df_filtered = compute_latency_stats(csv_path, column)
 
     plot_latency_stats(latency_stats, is_grouped, eps, interval, rows, input_features, output_features)

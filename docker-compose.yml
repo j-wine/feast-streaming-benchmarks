@@ -103,11 +103,15 @@ services:
       retries: 5
 
   redis:
-    image: redis
-    container_name: redis
+    container_name: dragonfly
+    image: docker.dragonflydb.io/dragonflydb/dragonfly
+    command: ["--logtostderr", "--maxmemory=4gb"]
     ports:
       - "6379:6379"
-    command: redis-server --maxmemory 4gb --maxmemory-policy allkeys-lru
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
     restart: unless-stopped
 
   dask-scheduler:
