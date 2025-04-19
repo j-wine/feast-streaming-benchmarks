@@ -4,9 +4,11 @@ registry:
   registry_type: sql
   path: postgresql+psycopg://postgres:mysecretpassword@localhost:55001/feast
 online_store:
-  type: redis
-  connection_string: host.docker.internal:6379
-offline_store:
-  type: dask
+  type: mysql
+  host: localhost
+  port: 3306
+  database: feast_online
+  user: root
+  password: mysecretpassword
 entity_key_serialization_version: 2
 

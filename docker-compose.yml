@@ -9,7 +9,7 @@ services:
     depends_on:
       registry:
         condition: service_healthy
-      redis:
+      mysql:
         condition: service_started
     ports:
       - "6566:6566"
@@ -100,14 +100,17 @@ services:
       interval: 5s
       retries: 5
 
-  redis:
-    image: redis
-    container_name: redis
+  mysql:
+    image: mysql:8
+    container_name: mysql
     ports:
-      - "6379:6379"
-    command: redis-server --maxmemory 4gb --maxmemory-policy allkeys-lru
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: mysecretpassword
+      MYSQL_DATABASE: feast_online
+    volumes:
+      - mysql_data:/var/lib/mysql
     restart: unless-stopped
-
   zookeeper:
     image: confluentinc/cp-zookeeper:7.0.1
     container_name: zookeeper
@@ -136,3 +139,6 @@ services:
       retries: 5
       start_period: 20s
     restart: unless-stopped
+
+volumes:
+  mysql_data:
