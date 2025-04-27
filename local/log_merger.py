@@ -8,7 +8,7 @@ import re
 from datetime import datetime
 
 
-def parse_spark_ingestor_log(input_filename="spark_log", output_filename="parsed_spark_ingestion_log.csv"):
+def parse_spark_ingestor_log(input_filename="../logs/spark_log", output_filename="parsed_spark_ingestion_log.csv"):
     with open(input_filename, "r") as f:
         spark_log = f.read()
 
