@@ -4,7 +4,12 @@ registry:
   registry_type: sql
   path: postgresql+psycopg://postgres:mysecretpassword@registry:5432/feast
 online_store:
-  type: redis
-  connection_string: redis:6379
+    type: snowflake.online
+    account: cgylolz-gd57972
+    user: Jberg
+    password: 2CvCpvUYHgNzyWt
+    role: ACCOUNTADMIN
+    warehouse: COMPUTE_WH
+    database: FEAST_DB
 entity_key_serialization_version: 2
 
