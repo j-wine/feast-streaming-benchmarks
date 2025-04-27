@@ -5,6 +5,6 @@ registry:
   path: postgresql+psycopg://postgres:mysecretpassword@registry:5432/feast
 online_store:
   type: redis
-  connection_string: host.docker.internal:6379
+  connection_string: redis:6379
 entity_key_serialization_version: 2
 
