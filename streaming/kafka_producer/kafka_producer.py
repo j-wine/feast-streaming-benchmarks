@@ -9,9 +9,9 @@ from kafka.errors import UnknownTopicOrPartitionError, KafkaError
 import timing_helper
 
 # --- Parameters ---
-BENCHMARK_ROWS = 10_000 # Number of datapoints send
-ENTITY_PER_SECOND = 1000
-BENCHMARK_FEATURES = 100  # Number of features to include per entity
+BENCHMARK_ROWS = 100 # Number of datapoints send
+ENTITY_PER_SECOND = 10
+BENCHMARK_FEATURES = 10  # Number of features to include per entity
 
 BENCHMARK_TOPIC = "benchmark_entity_topic"
 KAFKA_BROKERS = ["broker-1:9092"]
