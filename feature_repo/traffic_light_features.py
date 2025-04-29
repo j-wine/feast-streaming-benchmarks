@@ -1,14 +1,27 @@
 from datetime import timedelta
 
-from feast import Field
+from feast import Field, FeatureView
 from feast.stream_feature_view import stream_feature_view
-from feast.types import Int64
+from feast.types import Int64, UnixTimestamp
 from pyspark.sql import DataFrame
 
 from entities import benchmark_entity
-from data_sources import benchmark_stream_source, hundred_features_benchmark_stream_source
+from data_sources import benchmark_stream_source, hundred_features_benchmark_stream_source, benchmark_push_source
 
-
+benchmark_sum_push_fv= FeatureView(name="benchmark_push_stats",
+                            entities=[benchmark_entity],
+                             ttl=timedelta(days=140),
+                             online=True,
+                             source=benchmark_push_source,
+                             schema=[
+                                 Field(name="sum", dtype=Int64), Field(name="benchmark_entity", dtype=Int64),
+                                 Field(
+                                     name="event_timestamp",
+                                     dtype=UnixTimestamp,
+                                     description="Event timestamp of the batch",
+                                 )
+                             ],
+                             )
 @stream_feature_view(
     entities=[benchmark_entity],
     ttl=timedelta(days=140),

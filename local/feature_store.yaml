@@ -4,9 +4,9 @@ registry:
   registry_type: sql
   path: postgresql+psycopg://postgres:mysecretpassword@localhost:55001/feast
 online_store:
-  type: redis
-  connection_string: localhost:6379
+   type: bigtable
+   project_id: feast-benchmark
+   instance: feastbigtable
 offline_store:
-  type: dask
+  type: file
 entity_key_serialization_version: 2
-

@@ -1,6 +1,6 @@
 from datetime import timedelta
 
-from feast import KafkaSource, FileSource
+from feast import KafkaSource, FileSource, PushSource
 from feast.data_format import JsonFormat
 
 BENCHMARK_TOPIC = "benchmark_entity_topic"
@@ -18,7 +18,10 @@ benchmark_batch_source = FileSource(
     path="offline_data/generated_data.parquet",
     timestamp_field="event_timestamp",
 )
-
+benchmark_push_source = PushSource(
+    name="benchmark_push_source",
+    batch_source=benchmark_batch_source
+)
 benchmark_stream_source = KafkaSource(
     name="benchmark_stream_source",
     kafka_bootstrap_servers="broker-1:9092",
