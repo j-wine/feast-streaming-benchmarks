@@ -2,8 +2,8 @@ project: feast_demo_local
 provider: gcp
 registry:
   registry_type: sql
-  path: postgresql+psycopg://postgres:mysecretpassword@localhost:55001/feast
-#  path: postgresql+psycopg://postgres:mysecretpassword@registry:5432/feast
+  path: postgresql+psycopg://postgres:mysecretpassword@registry:5432/feast
+#  path: postgresql+psycopg://postgres:mysecretpassword@localhost:55001/feast
 online_store:
    type: bigtable
    project_id: feast-benchmark

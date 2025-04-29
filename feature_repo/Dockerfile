@@ -11,6 +11,8 @@ RUN pip install --upgrade pip \
     && pip install -r requirements.txt
 
 COPY . /app
+ENV GOOGLE_APPLICATION_CREDENTIALS=/app/application_default_credentials.json
+
 WORKDIR /app
 
 RUN echo "#!/bin/bash\nfeast apply\nfeast serve -h 0.0.0.0" > /app/entrypoint.sh && chmod +x /app/entrypoint.sh
