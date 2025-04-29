@@ -14,9 +14,9 @@ SFV_10_FEATURES_SUM = "feature_sum:sum"
 SFV_100_FEATURES_SUM = "hundred_features_sum:sum"
 SFV_100_FEATURES_SUM_100 = "hundred_features_all_sum:sum"
 # ---------- BENCHMARK PARAMS ----------
-STREAM_FEATURE_VIEW = SFV_100_FEATURES_SUM_100
+STREAM_FEATURE_VIEW = SFV_10_FEATURES_SUM
 BENCHMARK_ROWS = 10_000
-ENTITY_PER_SECOND = 1000
+ENTITY_PER_SECOND = 100
 PROCESSING_INTERVAL = 1
 GROUP_SIZE = ENTITY_PER_SECOND * PROCESSING_INTERVAL
 
@@ -45,7 +45,7 @@ def schedule_polling(entities, receive_times, produce_times, timeout_factor = 5)
         start_time = time.time()
         timeout = PROCESSING_INTERVAL * timeout_factor
         """Poll a group of entities and log each result individually into result_queue."""
-        print("schedule_polling")
+        # print("schedule_polling")
 
         # Create dictionaries to map entity_id → times
         receive_map = dict(zip(entities, receive_times))
@@ -55,8 +55,8 @@ def schedule_polling(entities, receive_times, produce_times, timeout_factor = 5)
         while not all(retrieved.values()):
             elapsed = time.time() - start_time
             if elapsed > timeout:
-                not_retrieved = [eid for eid, ok in retrieved.items() if not ok]
-                print(f"⏱️ Polling timed out after {elapsed:.2f}s. Missing: {not_retrieved}")
+                # not_retrieved = [eid for eid, ok in retrieved.items() if not ok]
+                # print(f"⏱️ Polling timed out after {elapsed:.2f}s. Missing: {not_retrieved}")
                 break
 
             entity_rows = [{"benchmark_entity": eid} for eid in entities if not retrieved[eid]]
@@ -64,16 +64,16 @@ def schedule_polling(entities, receive_times, produce_times, timeout_factor = 5)
                 features=[STREAM_FEATURE_VIEW],
                 entity_rows=entity_rows
             ).to_dict()
-            print(f"updated: {updated}")
+            # print(f"updated: {updated}")
             ids = updated.get("benchmark_entity", [])
             values = updated.get("sum", [])
             if not ids or not values:
-                print(f"⚠️ Unexpected Feast response: {updated}")
+                # print(f"⚠️ Unexpected Feast response: {updated}")
                 time.sleep(1)
                 continue
             for entity_id, val in zip(ids,values):
                 if val is not None and not retrieved[entity_id]:
-                    print(f"put entity_id in result_queue: {entity_id}")
+                    # print(f"put entity_id in result_queue: {entity_id}")
                     retrieve_time = time.time()
                     result_queue.put({
                         "entity_id": entity_id,
@@ -87,7 +87,7 @@ def schedule_polling(entities, receive_times, produce_times, timeout_factor = 5)
             not_retrieved = {k for k, v in retrieved.items() if not v}
             if not_retrieved:
                 # print(f"sleeping in schedule_polling for entities{not_retrieved}...")
-                print(f"sleeping in schedule_polling...")
+                # print(f"sleeping in schedule_polling...")
                 time.sleep(0.1)
 
     except Exception as e:
@@ -206,12 +206,12 @@ def consume_kafka_messages_grouped():
     last_message_time = time.time()
 
     while True:
-        print(f"time.time():{time.time()}, last message time: {last_message_time}")
+        # print(f"time.time():{time.time()}, last message time: {last_message_time}")
         try:
             message = next(consumer)
             last_message_time = time.time()
         except StopIteration:
-            print(f"last message time: {last_message_time}")
+            # print(f"last message time: {last_message_time}")
             if time.time() - last_message_time > 5:
                 print("⏱️ No new messages received for over 5 seconds — stopping.")
                 break
@@ -237,9 +237,8 @@ def consume_kafka_messages_grouped():
                 print(f"⚠️ Duplicate entity_id encountered: {entity_id}")
                 continue
         seen_entity_ids.add(entity_id)
-        print("before acquire")
+        print(f"added seen entity_id: {entity_id}")
         acquired = group_lock.acquire(timeout=1)
-        print("after acquire")
         if not acquired:
             print("⚠️ Could not acquire group_lock — skipping this message.")
             continue

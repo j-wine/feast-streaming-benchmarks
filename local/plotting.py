@@ -86,11 +86,11 @@ if __name__ == "__main__":
     operating_system = "linux"
     csv_path = "merged_log.csv"
     column = "preprocess_until_poll"
-    eps = 1000
+    eps = 100
     interval = 1
     rows = 10_000
-    input_features = 100
-    output_features = 100
+    input_features = 10
+    output_features = 1
     is_grouped = True
     online_store = "redis"
     latency_stats, df_filtered = compute_latency_stats(csv_path, column)
