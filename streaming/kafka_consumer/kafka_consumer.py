@@ -60,10 +60,12 @@ def schedule_polling(entities, receive_times, produce_times, timeout_factor = 5)
                 break
 
             entity_rows = [{"benchmark_entity": eid} for eid in entities if not retrieved[eid]]
+            pre_get_time = time.time()
             updated = store.get_online_features(
                 features=[STREAM_FEATURE_VIEW],
                 entity_rows=entity_rows
             ).to_dict()
+            post_get_time = time.time()
             # print(f"updated: {updated}")
             ids = updated.get("benchmark_entity", [])
             values = updated.get("sum", [])
@@ -80,6 +82,8 @@ def schedule_polling(entities, receive_times, produce_times, timeout_factor = 5)
                         "produce_timestamp": round(produce_map[entity_id], 6),
                         "receive_timestamp": round(receive_map[entity_id], 6),
                         "retrieval_timestamp": round(retrieve_time, 6),
+                        "get_time": round(post_get_time - pre_get_time, 6),
+                        "get_batch_size": len(entity_rows)
                     })
                     retrieved[entity_id] = True
                 # elif val is None:
@@ -108,7 +112,7 @@ def write_results_from_queue():
     with open(CSV_PATH, "a", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=
         [
-            "entity_id", "produce_timestamp","receive_timestamp", "retrieval_timestamp"
+            "entity_id", "produce_timestamp","receive_timestamp", "retrieval_timestamp","get_time","get_batch_size"
         ],delimiter=";")
         writer.writerows(all_results)
         print(f"📝 Wrote {len(all_results)} entries to {CSV_PATH}")
@@ -174,10 +178,12 @@ def consume_kafka_messages_individual_polling():
 def poll_single_entity(entity_id, receive_time, produce_time):
     entity_row = [{"benchmark_entity": entity_id}]
     while True:
+        pre_get_time = time.time()
         updated = store.get_online_features(
             features=[STREAM_FEATURE_VIEW],
             entity_rows=entity_row
         ).to_dict()
+        post_get_time = time.time()
         feature_val = updated["sum"][0]
         if feature_val is not None:
             retrieve_time = time.time()
@@ -187,6 +193,8 @@ def poll_single_entity(entity_id, receive_time, produce_time):
                 "produce_timestamp": round(produce_time, 6), # time of entity created by producer
                 "receive_timestamp": round(receive_time, 6), # time of entity received by producer
                 "retrieval_timestamp": round(retrieve_time, 6), # time of successful poll
+                "get_time": round(post_get_time - pre_get_time, 6),
+                "get_batch_size": len(entity_row)
             })
             break
         time.sleep(0.1)
@@ -286,7 +294,7 @@ if __name__ == "__main__":
     if not os.path.exists(CSV_PATH):
         with open(CSV_PATH, "w", newline="") as f:
             writer = csv.DictWriter(f, fieldnames=[
-                "entity_id", "produce_timestamp","receive_timestamp", "retrieval_timestamp",
+                "entity_id", "produce_timestamp","receive_timestamp", "retrieval_timestamp","get_time","get_batch_size"
             ],delimiter=";")
             writer.writeheader()
 

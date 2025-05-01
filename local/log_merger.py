@@ -99,9 +99,10 @@ def merge_and_compute_latencies(spark_csv_path, kafka_csv_path, output_csv="merg
         "spark_ingestion_time",
         "receive_timestamp",
         "retrieval_timestamp",
-        "produce_timestamp",
+        "produce_timestamp"
     ]:
         merged_df[col + "_hms"] = merged_df[col].apply(format_timestamp_hms_milliseconds)
+
     # Calculate latency metrics (durations)
     # durations are already formatted in seconds
     merged_df["preprocess_until_poll"] = merged_df["retrieval_timestamp"] - merged_df["spark_ingestion_time"]
