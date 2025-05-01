@@ -8,15 +8,18 @@ from queue import Queue
 from feast import FeatureStore
 from kafka import KafkaConsumer
 import timing_helper
+from collections import defaultdict
+
+
 
 # ---------- STREAM FEATURE VIEWS ----------
 SFV_10_FEATURES_SUM = "feature_sum:sum"
 SFV_100_FEATURES_SUM = "hundred_features_sum:sum"
 SFV_100_FEATURES_SUM_100 = "hundred_features_all_sum:sum"
 # ---------- BENCHMARK PARAMS ----------
-STREAM_FEATURE_VIEW = SFV_10_FEATURES_SUM
-BENCHMARK_ROWS = 10_000
-ENTITY_PER_SECOND = 100
+STREAM_FEATURE_VIEW = SFV_100_FEATURES_SUM_100
+BENCHMARK_ROWS = 100_000
+ENTITY_PER_SECOND = 2500
 PROCESSING_INTERVAL = 1
 GROUP_SIZE = ENTITY_PER_SECOND * PROCESSING_INTERVAL
 
@@ -31,7 +34,8 @@ KAFKA_BROKERS = ["broker-1:9092"]
 
 RUN_ID = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
 GROUP_ID  = f"feast-consumer-{RUN_ID}"
-CSV_PATH = f"/app/logs/kafka_latency_log.csv"
+CSV_PATH = f"/app/logs/kafka_latency_log{RUN_ID}.csv"
+THREAD_STATS_PATH = f"/app/logs/thread_request_stats{RUN_ID}.csv"
 
 polling_threads = []
 store = FeatureStore()
@@ -40,6 +44,14 @@ group_times = []
 group_lock = threading.Lock()
 result_queue = Queue()
 group_produce_times = []
+request_stats = defaultdict(int)
+active_threads_count = []
+
+def track_request(timestamp):
+    second = int(timestamp)
+    request_stats[second] += 1
+
+
 def schedule_polling(entities, receive_times, produce_times, timeout_factor = 5):
     try:
         start_time = time.time()
@@ -51,6 +63,7 @@ def schedule_polling(entities, receive_times, produce_times, timeout_factor = 5)
         receive_map = dict(zip(entities, receive_times))
         produce_map = dict(zip(entities, produce_times))
         retrieved = {eid: False for eid in entities}
+        retry_count = defaultdict(int)
 
         while not all(retrieved.values()):
             elapsed = time.time() - start_time
@@ -61,6 +74,7 @@ def schedule_polling(entities, receive_times, produce_times, timeout_factor = 5)
 
             entity_rows = [{"benchmark_entity": eid} for eid in entities if not retrieved[eid]]
             pre_get_time = time.time()
+            track_request(pre_get_time)
             updated = store.get_online_features(
                 features=[STREAM_FEATURE_VIEW],
                 entity_rows=entity_rows
@@ -74,6 +88,7 @@ def schedule_polling(entities, receive_times, produce_times, timeout_factor = 5)
                 time.sleep(1)
                 continue
             for entity_id, val in zip(ids,values):
+                retry_count[entity_id] += 1
                 if val is not None and not retrieved[entity_id]:
                     # print(f"put entity_id in result_queue: {entity_id}")
                     retrieve_time = time.time()
@@ -83,16 +98,11 @@ def schedule_polling(entities, receive_times, produce_times, timeout_factor = 5)
                         "receive_timestamp": round(receive_map[entity_id], 6),
                         "retrieval_timestamp": round(retrieve_time, 6),
                         "get_time": round(post_get_time - pre_get_time, 6),
-                        "get_batch_size": len(entity_rows)
+                        "get_batch_size": len(entity_rows),
+                        "retry_attempts": retry_count[entity_id]
                     })
                     retrieved[entity_id] = True
-                # elif val is None:
-                #     print(f"None for id {entity_id}")
-            not_retrieved = {k for k, v in retrieved.items() if not v}
-            if not_retrieved:
-                # print(f"sleeping in schedule_polling for entities{not_retrieved}...")
-                # print(f"sleeping in schedule_polling...")
-                time.sleep(0.1)
+            time.sleep(0.1)
 
     except Exception as e:
         print(f"💥 Exception in polling thread: {e}")
@@ -112,7 +122,7 @@ def write_results_from_queue():
     with open(CSV_PATH, "a", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=
         [
-            "entity_id", "produce_timestamp","receive_timestamp", "retrieval_timestamp","get_time","get_batch_size"
+            "entity_id", "produce_timestamp","receive_timestamp", "retrieval_timestamp","get_time","get_batch_size","retry_attempts"
         ],delimiter=";")
         writer.writerows(all_results)
         print(f"📝 Wrote {len(all_results)} entries to {CSV_PATH}")
@@ -179,6 +189,7 @@ def poll_single_entity(entity_id, receive_time, produce_time):
     entity_row = [{"benchmark_entity": entity_id}]
     while True:
         pre_get_time = time.time()
+        track_request(pre_get_time)
         updated = store.get_online_features(
             features=[STREAM_FEATURE_VIEW],
             entity_rows=entity_row
@@ -294,7 +305,7 @@ if __name__ == "__main__":
     if not os.path.exists(CSV_PATH):
         with open(CSV_PATH, "w", newline="") as f:
             writer = csv.DictWriter(f, fieldnames=[
-                "entity_id", "produce_timestamp","receive_timestamp", "retrieval_timestamp","get_time","get_batch_size"
+                "entity_id", "produce_timestamp","receive_timestamp", "retrieval_timestamp","get_time","get_batch_size", "retry_attempts"
             ],delimiter=";")
             writer.writeheader()
 
@@ -314,4 +325,10 @@ if __name__ == "__main__":
     # Clean shutdown
     result_queue.put("STOP")
     logger_thread.join()
-    print("🛑 Logging completed.")
+    print("🛑 Logging thread completed.")
+    # Save per-second request statistics
+    with open(THREAD_STATS_PATH, "w") as f:
+        f.write("second;requests\n")
+        for second, count in sorted(request_stats.items()):
+            f.write(f"{second};{count}\n")
+    print(f"thread stats written to {THREAD_STATS_PATH}")
