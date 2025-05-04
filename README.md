@@ -58,7 +58,7 @@ Each benchmark run outputs a CSV file with per-request metrics including:
 
 Graphs are generated and stored under `local/plots/`.
 
-## 🖥️ System Requirements
+## System Requirements
 
 - Docker + Docker Compose
 - Python <=3.10 (3.11 does NOT work due to conflicting dependencies)
