@@ -4,7 +4,7 @@ services:
     build:
       context: ./feature_repo
     volumes:
-      - ./feature_repo/offline_data:/app/offline_data  # ✅ Mounts `offline_data` directly inside `/app/`
+      - ./feature_repo/offline_data:/app/offline_data
     depends_on:
       registry:
         condition: service_healthy
