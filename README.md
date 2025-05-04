@@ -1,9 +1,2 @@
-Dependency notes:
-- flink dependency only supports python 3.11
-- dill causes serializing issues with feature_store.yaml
-- pyarrow needs build tools
-- kafka_producer needs six dependency because kafka-python relies on it  
-
-TO DO:
-
-- create google github runners for test + prod enviroments
+Changes in branch produced error. 
+Reminder: Create issue in Feast and build repo for error reproduction.
