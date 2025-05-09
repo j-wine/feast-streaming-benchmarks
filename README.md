@@ -65,7 +65,6 @@ Graphs are generated and stored under `local/plots/`.
 - see requiremens.txt
 
 ## Running the Benchmark
-Create the local .parquet file by running `generate_parquet_files.py`, with the parameters for rows and features fitted to the benchmark cases.
 
 Set your parameters in a bash script or `.env` file and launch:
 

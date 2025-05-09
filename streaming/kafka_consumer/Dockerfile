@@ -22,4 +22,4 @@ ENV GOOGLE_APPLICATION_CREDENTIALS=/app/application_default_credentials.json
 
 WORKDIR /app
 # wait for kafka broker
-CMD ["sh", "-c", "sleep 10 && python kafka_consumer.py"]
+CMD ["sh", "-c", "python kafka_consumer.py"]

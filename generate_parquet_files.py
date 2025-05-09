@@ -3,6 +3,9 @@ import pandas as pd
 import numpy as np
 from pathlib import Path
 
+FEATURES = 250 # set rows to highest amount used in benchmark
+ROWS = 750_000 # set rows to highest amount used in benchmark
+# bench_duration_in_seconds * EPS <= ROWS
 def generate_data(num_entities: int, num_features: int) -> pd.DataFrame:
     features = [f"feature_{i}" for i in range(num_features)]
     columns = ["benchmark_entity", "event_timestamp"] + features
