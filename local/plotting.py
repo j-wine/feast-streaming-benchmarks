@@ -4,11 +4,10 @@ from datetime import datetime
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-
-
+from dotenv import load_dotenv
 def analyze_thread_stats_vs_latency(thread_csv, latency_csv, is_grouped=True, eps=2500, interval=1,
                                      rows=100_000, input_features=100, output_features=100,
-                                     online_store="redis", operating_system="linux", output_prefix="plots/analysis"):
+                                     online_store="redis", operating_system="linux", output_prefix="local/plots/analysis"):
     # Load thread stats
     df_threads = pd.read_csv(thread_csv, sep=";")
     df_threads.rename(columns={"second": "timestamp_second", "requests": "requests_per_second"}, inplace=True)
@@ -111,7 +110,7 @@ def plot_latency_stats(stats, is_grouped, eps, interval, rows, input_features, o
     if output_file is None:
         mode = "grouped" if is_grouped else "single"
         output_file = f"lat_{operating_system}_{online_store}_{mode}_{eps}eps_{interval}s_{rows}rows_{input_features}in_{output_features}out.png"
-    full_path = os.path.join("plots", output_file)
+    full_path = os.path.join("local/plots/", output_file)
     plt.savefig(full_path)
     plt.show()
 
@@ -135,14 +134,16 @@ def plot_latency_over_time(df, is_grouped, eps, interval, rows, input_features, 
         output_file = f"time_{operating_system}_{online_store}_{mode}_{eps}eps_{interval}s_{rows}rows_{input_features}in_{output_features}out.png"
 
     plt.tight_layout()
-    full_path = os.path.join("plots", output_file)
+    full_path = os.path.join("local/plots/", output_file)
     plt.savefig(full_path)
     plt.show()
 
 if __name__ == "__main__":
+    load_dotenv()
+
     # ==== MAIN ====
     operating_system = "linux"
-    csv_path = "merged_log.csv"
+    csv_path = "local/merged_log.csv"
     column = "preprocess_until_poll"
     eps = int(os.getenv("ENTITY_PER_SECOND"))
     interval = int(os.getenv("PROCESSING_INTERVAL"))
@@ -156,7 +157,7 @@ if __name__ == "__main__":
     plot_latency_stats(latency_stats, is_grouped, eps, interval, rows, input_features, output_features,online_store,operating_system)
     plot_latency_over_time(df_filtered, is_grouped, eps, interval, rows, input_features, output_features,online_store,operating_system)
     analyze_thread_stats_vs_latency(
-        thread_csv="../logs/thread_request_stats.csv",
+        thread_csv="logs/thread_request_stats.csv",
         latency_csv=csv_path,
         is_grouped=is_grouped,
         eps=eps,
