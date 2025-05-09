@@ -78,7 +78,7 @@ def schedule_polling(entities, receive_times, produce_times, timeout_factor = 20
             ids = updated.get("benchmark_entity", [])
             values = updated.get("sum", [])
             if not ids or not values:
-                # print(f"⚠️ Unexpected Feast response: {updated}")
+                print(f"Unexpected Feast response: {updated}")
                 time.sleep(1)
                 continue
             for entity_id, val in zip(ids,values):
@@ -110,7 +110,7 @@ def write_results_from_queue():
         if result == "STOP":
             break
         all_results.append(result)
-        print(f"result from queue: {result}")
+        # print(f"result from queue: {result}")
     all_results.sort(key=lambda r: r["receive_timestamp"])
     # Write all to CSV at once
     with open(CSV_PATH, "a", newline="") as f:
@@ -119,7 +119,7 @@ def write_results_from_queue():
             "entity_id", "produce_timestamp","receive_timestamp", "retrieval_timestamp","get_time","get_batch_size","retry_attempts"
         ],delimiter=";")
         writer.writerows(all_results)
-        print(f"📝 Wrote {len(all_results)} entries to {CSV_PATH}")
+        print(f"Wrote {len(all_results)} entries to {CSV_PATH}")
 
 from datetime import datetime
 def consume_kafka_messages_individual_polling():
@@ -177,7 +177,7 @@ def consume_kafka_messages_individual_polling():
             f.write("entity_id\n")
             for dup in sorted(duplicate_entity_ids):
                 f.write(f"{dup}\n")
-        # print(f"📁 Duplicates written to {duplicates_csv}")
+        # print(f" Duplicates written to {duplicates_csv}")
 
 def poll_single_entity(entity_id, receive_time, produce_time):
     entity_row = [{"benchmark_entity": entity_id}]
@@ -250,7 +250,7 @@ def consume_kafka_messages_grouped():
                 print(f"⚠️ Duplicate entity_id encountered: {entity_id}")
                 continue
         seen_entity_ids.add(entity_id)
-        print(f"added seen entity_id: {entity_id}")
+        # print(f"added seen entity_id: {entity_id}")
         acquired = group_lock.acquire(timeout=1)
         if not acquired:
             print("⚠️ Could not acquire group_lock — skipping this message.")
@@ -281,7 +281,7 @@ def consume_kafka_messages_grouped():
 
         print(f"len(seen_entity_ids): {len(seen_entity_ids)}")
         if len(seen_entity_ids) >= BENCHMARK_ROWS:
-            print(f"🛑 Reached {BENCHMARK_ROWS} unique entity IDs")
+            print(f"Reached {BENCHMARK_ROWS} unique entity IDs")
             break
 
     if duplicate_entity_ids:
@@ -290,7 +290,7 @@ def consume_kafka_messages_grouped():
             f.write("entity_id\n")
             for dup in sorted(duplicate_entity_ids):
                 f.write(f"{dup}\n")
-        print(f"📁 Duplicates written to {duplicates_csv}")
+        print(f"Duplicates written to {duplicates_csv}")
     else:
         print("✅ No duplicate entity_ids encountered.")
 
