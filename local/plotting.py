@@ -153,8 +153,8 @@ if __name__ == "__main__":
     online_store = os.getenv("ONLINE_STORE")
     latency_stats, df_filtered = compute_latency_stats(csv_path, column)
     #
-    # plot_latency_stats(latency_stats, is_grouped, eps, interval, rows, input_features, output_features,online_store,operating_system)
-    # plot_latency_over_time(df_filtered, is_grouped, eps, interval, rows, input_features, output_features,online_store,operating_system)
+    plot_latency_stats(latency_stats, is_grouped, eps, interval, rows, input_features, output_features,online_store,operating_system)
+    plot_latency_over_time(df_filtered, is_grouped, eps, interval, rows, input_features, output_features,online_store,operating_system)
     analyze_thread_stats_vs_latency(
         thread_csv="../logs/thread_request_stats.csv",
         latency_csv=csv_path,
