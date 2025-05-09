@@ -52,7 +52,7 @@ def track_request(timestamp):
     request_stats[second] += 1
 
 
-def schedule_polling(entities, receive_times, produce_times, timeout_factor = 5):
+def schedule_polling(entities, receive_times, produce_times, timeout_factor = 20):
     try:
         start_time = time.time()
         timeout = PROCESSING_INTERVAL * timeout_factor
@@ -68,8 +68,8 @@ def schedule_polling(entities, receive_times, produce_times, timeout_factor = 5)
         while not all(retrieved.values()):
             elapsed = time.time() - start_time
             if elapsed > timeout:
-                # not_retrieved = [eid for eid, ok in retrieved.items() if not ok]
-                # print(f"⏱️ Polling timed out after {elapsed:.2f}s. Missing: {not_retrieved}")
+                not_retrieved = [eid for eid, ok in retrieved.items() if not ok]
+                print(f"⏱️ Polling timed out after {elapsed:.2f}s. Missing: {not_retrieved}")
                 break
 
             entity_rows = [{"benchmark_entity": eid} for eid in entities if not retrieved[eid]]
@@ -231,8 +231,8 @@ def consume_kafka_messages_grouped():
             last_message_time = time.time()
         except StopIteration:
             # print(f"last message time: {last_message_time}")
-            if time.time() - last_message_time > 5:
-                print("⏱️ No new messages received for over 5 seconds — stopping.")
+            if time.time() - last_message_time > 10:
+                print("⏱️ No new messages received for over 10 seconds — stopping.")
                 break
             continue  # Loop again to check timeout
 
@@ -313,7 +313,7 @@ if __name__ == "__main__":
     logger_thread = threading.Thread(target=write_results_from_queue)
     logger_thread.start()
     print(f"starting to wait at {time.time()}")
-    timing_helper.wait_until_second(PROCESSING_START-2)
+    timing_helper.wait_until_second(PROCESSING_START-5)
     try:
         consume_kafka_messages_grouped()
     except KeyboardInterrupt:
