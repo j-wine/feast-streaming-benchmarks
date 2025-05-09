@@ -10,25 +10,19 @@ from kafka import KafkaConsumer
 import timing_helper
 from collections import defaultdict
 
-
-
-# ---------- STREAM FEATURE VIEWS ----------
-SFV_10_FEATURES_SUM = "feature_sum:sum"
-SFV_100_FEATURES_SUM = "hundred_features_sum:sum"
-SFV_100_FEATURES_SUM_100 = "hundred_features_all_sum:sum"
 # ---------- BENCHMARK PARAMS ----------
-STREAM_FEATURE_VIEW = SFV_100_FEATURES_SUM_100
-BENCHMARK_ROWS = 100_000
-ENTITY_PER_SECOND = 2500
-PROCESSING_INTERVAL = 1
+STREAM_FEATURE_VIEW = os.getenv("FEATURE_VIEW_NAME")
+BENCHMARK_ROWS = int(os.getenv("ROWS"))
+ENTITY_PER_SECOND = int(os.getenv("ENTITY_PER_SECOND"))
+PROCESSING_INTERVAL = int(os.getenv("PROCESSING_INTERVAL"))
+PROCESSING_START=int(os.getenv("PROCESSING_START",30)) # second of the minute for producer to start sending
+
 GROUP_SIZE = ENTITY_PER_SECOND * PROCESSING_INTERVAL
 
 # official benchmark uses params: https://github.com/feast-dev/feast-benchmarks/blob/main/python/full-report-redis.log
 # Entity rows: 50; Features: 50; Concurrency: 5; RPS: 10
 # Entity rows is our group size
 # features has to switch out feature view
-PROCESSING_START = 30 # second of the minute for producer to start sending
-
 BENCHMARK_TOPIC = "benchmark_entity_topic"
 KAFKA_BROKERS = ["broker-1:9092"]
 
@@ -76,7 +70,7 @@ def schedule_polling(entities, receive_times, produce_times, timeout_factor = 5)
             pre_get_time = time.time()
             track_request(pre_get_time)
             updated = store.get_online_features(
-                features=[STREAM_FEATURE_VIEW],
+                features=[f"{STREAM_FEATURE_VIEW}:sum"],
                 entity_rows=entity_rows
             ).to_dict()
             post_get_time = time.time()
@@ -191,7 +185,7 @@ def poll_single_entity(entity_id, receive_time, produce_time):
         pre_get_time = time.time()
         track_request(pre_get_time)
         updated = store.get_online_features(
-            features=[STREAM_FEATURE_VIEW],
+            features=[f"{STREAM_FEATURE_VIEW}:sum"],
             entity_rows=entity_row
         ).to_dict()
         post_get_time = time.time()

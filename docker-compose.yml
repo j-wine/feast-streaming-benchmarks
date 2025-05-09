@@ -37,6 +37,11 @@ services:
     environment:
       - KAFKA_BROKER=broker:9092
       - FEAST_REPO_PATH=/app/feature_repo
+      - FEATURE_VIEW_NAME=${FEATURE_VIEW_NAME}
+      - ROWS=${ROWS}
+      - ENTITY_PER_SECOND=${ENTITY_PER_SECOND}
+      - PROCESSING_INTERVAL=${PROCESSING_INTERVAL}
+      - PROCESSING_START=${PROCESSING_START}
     restart: no
 
   spark_ingestor:
@@ -45,6 +50,9 @@ services:
       dockerfile: ./Dockerfile
     volumes:
       - ./feature_repo/offline_data:/app/offline_data
+    environment:
+      - FEATURE_VIEW_NAME=${FEATURE_VIEW_NAME}
+      - PROCESSING_INTERVAL=${PROCESSING_INTERVAL}
     container_name: spark_ingestor
     depends_on:
       broker-1:
@@ -53,6 +61,7 @@ services:
         condition: service_healthy
       kafka_producer:
         condition: service_started
+
     restart: unless-stopped
 
   kafka_producer:
@@ -67,6 +76,10 @@ services:
         condition: service_healthy
     environment:
       - KAFKA_BROKER=broker:9092
+      - FEATURES=${FEATURES}
+      - ROWS=${ROWS}
+      - ENTITY_PER_SECOND=${ENTITY_PER_SECOND}
+      - PROCESSING_START=${PROCESSING_START}
     volumes:
       - ./feature_repo/offline_data:/app/offline_data
     restart: no
@@ -104,8 +117,9 @@ services:
     container_name: redis
     ports:
       - "6379:6379"
-    command: redis-server --maxmemory 4gb --maxmemory-policy allkeys-lru
+    command: redis-server
     restart: unless-stopped
+
 
   zookeeper:
     image: confluentinc/cp-zookeeper:7.0.1

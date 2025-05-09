@@ -144,13 +144,13 @@ if __name__ == "__main__":
     operating_system = "linux"
     csv_path = "merged_log.csv"
     column = "preprocess_until_poll"
-    eps = 2500
-    interval = 1
-    rows = 100_000
-    input_features = 100
-    output_features = 100
+    eps = int(os.getenv("ENTITY_PER_SECOND"))
+    interval = int(os.getenv("PROCESSING_INTERVAL"))
+    rows = int(os.getenv("ROWS"))
+    input_features = int(os.getenv("FEATURES"))
+    output_features = input_features
     is_grouped = True
-    online_store = "redis"
+    online_store = os.getenv("ONLINE_STORE")
     latency_stats, df_filtered = compute_latency_stats(csv_path, column)
     #
     # plot_latency_stats(latency_stats, is_grouped, eps, interval, rows, input_features, output_features,online_store,operating_system)

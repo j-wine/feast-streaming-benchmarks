@@ -11,13 +11,12 @@ JAVA_HOME = os.getenv("JAVA_HOME")
 SPARK_HOME = os.getenv("SPARK_HOME")
 
 
-SFV_10_FEATURES_SUM = "feature_sum"
-SFV_100_FEATURES_SUM = "hundred_features_sum"
-SFV_100_FEATURES_SUM_100 = "hundred_features_all_sum"
-# sfv to ingest
-STREAM_FEATURE_VIEW = SFV_10_FEATURES_SUM
-# second of the minute for producer to start sending. not longer needed when we send one meaningless  message to init topic
-PROCESSING_START=30
+STREAM_FEATURE_VIEW = os.getenv("FEATURE_VIEW_NAME") # sfv to ingest
+PROCESSING_INTERVAL = int(os.getenv("PROCESSING_INTERVAL")) # int in seconds SparkProcessorConfig.processing_time
+
+# @BA document the producer topic initiation requirement
+# second of the minute for producer to start sending. is needed no longer  when we send one meaningless  message to init topic
+# PROCESSING_START=int(os.getenv("PROCESSING_START",30))
 
 # Ensure PySpark is properly configured with Kafka support
 os.environ["PYSPARK_SUBMIT_ARGS"] = "--packages org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.0 pyspark-shell"
@@ -35,8 +34,6 @@ print(f"Using Spark Version: {spark.version}")
 # Initialize Feature Store
 store = FeatureStore()
 
-
-
 def preprocess_fn(rows: pd.DataFrame):
     import time
     entity_ids = rows['benchmark_entity'].tolist()
@@ -49,7 +46,7 @@ ingestion_config = SparkProcessorConfig(
     mode="spark",
     source="kafka",
     spark_session=spark,
-    processing_time="1 seconds",
+    processing_time=f"{PROCESSING_INTERVAL} seconds",
     query_timeout=15
 )
 
