@@ -28,8 +28,8 @@ KAFKA_BROKERS = ["broker-1:9092"]
 
 RUN_ID = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
 GROUP_ID  = f"feast-consumer-{RUN_ID}"
-CSV_PATH = f"/app/logs/kafka_latency_log{RUN_ID}.csv"
-THREAD_STATS_PATH = f"/app/logs/thread_request_stats{RUN_ID}.csv"
+CSV_PATH = f"/app/logs/kafka_latency_log.csv"
+THREAD_STATS_PATH = f"/app/logs/thread_request_stats.csv"
 
 polling_threads = []
 store = FeatureStore()
