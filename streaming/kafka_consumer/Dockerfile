@@ -19,4 +19,4 @@ COPY kafka_consumer.py /app/
 COPY feature_store.yaml /app/
 WORKDIR /app
 # wait for kafka broker
-CMD ["sh", "-c", "sleep 10 && python kafka_consumer.py"]
+CMD ["sh", "-c", "python kafka_consumer.py"]
