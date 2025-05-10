@@ -8,7 +8,7 @@ import re
 from datetime import datetime
 
 
-def parse_spark_ingestor_log(input_filename="spark_log", output_filename="parsed_spark_ingestion_log.csv"):
+def parse_spark_ingestor_log(input_filename="logs/spark_log", output_filename="local/parsed_spark_ingestion_log.csv"):
     with open(input_filename, "r") as f:
         spark_log = f.read()
 
@@ -99,9 +99,10 @@ def merge_and_compute_latencies(spark_csv_path, kafka_csv_path, output_csv="merg
         "spark_ingestion_time",
         "receive_timestamp",
         "retrieval_timestamp",
-        "produce_timestamp",
+        "produce_timestamp"
     ]:
         merged_df[col + "_hms"] = merged_df[col].apply(format_timestamp_hms_milliseconds)
+
     # Calculate latency metrics (durations)
     # durations are already formatted in seconds
     merged_df["preprocess_until_poll"] = merged_df["retrieval_timestamp"] - merged_df["spark_ingestion_time"]
@@ -131,8 +132,8 @@ def merge_and_compute_latencies(spark_csv_path, kafka_csv_path, output_csv="merg
     merged_df.to_csv(output_csv, sep=';', index=False)
 
 if __name__ == "__main__":
-    consumer_csv_path = "../logs/kafka_latency_log.csv"
-    spark_csv_path = "parsed_spark_ingestion_log.csv"
-    output_path = "merged_log.csv"
+    consumer_csv_path = "logs/kafka_latency_log.csv"
+    spark_csv_path = "local/parsed_spark_ingestion_log.csv"
+    output_path = "local/merged_log.csv"
     parse_spark_ingestor_log()
     merge_and_compute_latencies(spark_csv_path, consumer_csv_path,output_path)

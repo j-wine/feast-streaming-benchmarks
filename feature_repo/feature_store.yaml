@@ -12,7 +12,5 @@ online_store:
   user: feast
   password: feastpw
   sslmode: disable  # Optional for local testing
-offline_store:
-  type: dask
 entity_key_serialization_version: 2
 
