@@ -2,11 +2,11 @@ project: feast_demo_local
 provider: local
 registry:
   registry_type: sql
-  path: postgresql+psycopg://postgres:mysecretpassword@localhost:55001/feast
+  path: postgresql+psycopg://postgres:mysecretpassword@registry:5432/feast
+#  path: postgresql+psycopg://postgres:mysecretpassword@localhost:55001/feast
 online_store:
-   type: bigtable
-   project_id: feast-benchmark
-   instance: feastbigtable
-offline_store:
-  type: file
+  type: redis
+  connection_string: redis:6379
 entity_key_serialization_version: 2
+
+

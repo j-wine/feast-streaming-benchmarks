@@ -98,14 +98,10 @@ services:
       - ./postgresql.conf:/etc/postgresql/postgresql.conf
       - ./pg_hba.conf:/etc/postgresql/pg_hba.conf
     restart: unless-stopped
-
     command: >
       postgres
       -c config_file=/etc/postgresql/postgresql.conf
       -c hba_file=/etc/postgresql/pg_hba.conf
-      -c listen_addresses='*'
-      -c max_connections=200
-
     healthcheck:
       test: ["CMD", "pg_isready", "-U", "postgres"]
       interval: 5s
@@ -114,7 +110,7 @@ services:
   redis:
     container_name: dragonfly
     image: docker.dragonflydb.io/dragonflydb/dragonfly
-    command: ["--logtostderr", "--maxmemory=4gb"]
+    command: ["--logtostderr"]
     ports:
       - "6379:6379"
     ulimits:
