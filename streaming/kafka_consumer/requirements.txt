@@ -13,6 +13,6 @@ feast[postgres,mysql]==0.47.0
 python-dateutil
 cryptography
 PyMySQL[rsa]
-
+distributed==2024.4.1
 
 

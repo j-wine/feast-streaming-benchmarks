@@ -4,8 +4,7 @@ services:
     build:
       context: ./feature_repo
     volumes:
-      - ./feature_repo:/app/feature_repo
-      - ./feature_repo/offline_data:/app/offline_data  # ✅ Mounts `offline_data` directly inside `/app/`
+      - ./feature_repo/offline_data:/app/offline_data
     depends_on:
       registry:
         condition: service_healthy
@@ -38,6 +37,11 @@ services:
     environment:
       - KAFKA_BROKER=broker:9092
       - FEAST_REPO_PATH=/app/feature_repo
+      - FEATURE_VIEW_NAME=${FEATURE_VIEW_NAME}
+      - ROWS=${ROWS}
+      - ENTITY_PER_SECOND=${ENTITY_PER_SECOND}
+      - PROCESSING_INTERVAL=${PROCESSING_INTERVAL}
+      - PROCESSING_START=${PROCESSING_START}
     restart: no
 
   spark_ingestor:
@@ -46,6 +50,9 @@ services:
       dockerfile: ./Dockerfile
     volumes:
       - ./feature_repo/offline_data:/app/offline_data
+    environment:
+      - FEATURE_VIEW_NAME=${FEATURE_VIEW_NAME}
+      - PROCESSING_INTERVAL=${PROCESSING_INTERVAL}
     container_name: spark_ingestor
     depends_on:
       broker-1:
@@ -68,6 +75,10 @@ services:
         condition: service_healthy
     environment:
       - KAFKA_BROKER=broker:9092
+      - FEATURES=${FEATURES}
+      - ROWS=${ROWS}
+      - ENTITY_PER_SECOND=${ENTITY_PER_SECOND}
+      - PROCESSING_START=${PROCESSING_START}
     volumes:
       - ./feature_repo/offline_data:/app/offline_data
     restart: no
@@ -87,14 +98,12 @@ services:
       - ./postgresql.conf:/etc/postgresql/postgresql.conf
       - ./pg_hba.conf:/etc/postgresql/pg_hba.conf
     restart: unless-stopped
-
     command: >
       postgres
       -c config_file=/etc/postgresql/postgresql.conf
       -c hba_file=/etc/postgresql/pg_hba.conf
       -c listen_addresses='*'
       -c max_connections=200
-
     healthcheck:
       test: ["CMD", "pg_isready", "-U", "postgres"]
       interval: 5s
