@@ -1,14 +1,16 @@
 #!/bin/bash
-
+# project was cloned into ~
+cd ~/feast-streaming-benchmarks
 set -e
+# --- Load repo-level .env ---
+set -o allexport
+source .env
+set +o allexport
 
 # --- CONFIG ---
 CREDENTIALS_PATH=~/application_default_credentials.json
 RESULTS_ROOT=~/benchmark_results
-PROCESSING_START_SECOND=30
-ONLINE_STORE=redis
-OPERATING_SYSTEM=linux
-MACHINE=local
+
 
 
 BENCHMARK_CONFIGS=(
