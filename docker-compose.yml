@@ -4,14 +4,11 @@ services:
     build:
       context: ./feature_repo
     volumes:
-      - ./feature_repo:/app/feature_repo
-      - ./feature_repo/offline_data:/app/offline_data  # ✅ Mounts `offline_data` directly inside `/app/`
+      - ./feature_repo/offline_data:/app/offline_data
     depends_on:
       registry:
         condition: service_healthy
       redis:
-        condition: service_started
-      dask-worker:
         condition: service_started
     ports:
       - "6566:6566"
@@ -40,6 +37,11 @@ services:
     environment:
       - KAFKA_BROKER=broker:9092
       - FEAST_REPO_PATH=/app/feature_repo
+      - FEATURE_VIEW_NAME=${FEATURE_VIEW_NAME}
+      - ROWS=${ROWS}
+      - ENTITY_PER_SECOND=${ENTITY_PER_SECOND}
+      - PROCESSING_INTERVAL=${PROCESSING_INTERVAL}
+      - PROCESSING_START=${PROCESSING_START}
     restart: no
 
   spark_ingestor:
@@ -48,6 +50,9 @@ services:
       dockerfile: ./Dockerfile
     volumes:
       - ./feature_repo/offline_data:/app/offline_data
+    environment:
+      - FEATURE_VIEW_NAME=${FEATURE_VIEW_NAME}
+      - PROCESSING_INTERVAL=${PROCESSING_INTERVAL}
     container_name: spark_ingestor
     depends_on:
       broker-1:
@@ -70,6 +75,10 @@ services:
         condition: service_healthy
     environment:
       - KAFKA_BROKER=broker:9092
+      - FEATURES=${FEATURES}
+      - ROWS=${ROWS}
+      - ENTITY_PER_SECOND=${ENTITY_PER_SECOND}
+      - PROCESSING_START=${PROCESSING_START}
     volumes:
       - ./feature_repo/offline_data:/app/offline_data
     restart: no
@@ -112,25 +121,6 @@ services:
       memlock:
         soft: -1
         hard: -1
-    restart: unless-stopped
-
-  dask-scheduler:
-    image: ghcr.io/dask/dask:latest
-    container_name: dask-scheduler
-    command: dask-scheduler
-    ports:
-      - "8786:8786"
-      - "8787:8787"
-    restart: unless-stopped
-
-  dask-worker:
-    image: ghcr.io/dask/dask:latest
-    container_name: dask-worker
-    command: dask-worker dask-scheduler:8786
-    depends_on:
-      - dask-scheduler
-    links:
-      - dask-scheduler
     restart: unless-stopped
 
   zookeeper:

@@ -1,7 +1,5 @@
-# Use the official Python 3.10 image
 FROM python:3.10.11
 
-# Set environment variables
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONWARNINGS="ignore"
 # Install Java (default-jdk installs OpenJDK 17)
@@ -15,14 +13,14 @@ RUN export JAVA_HOME=$(dirname $(dirname $(readlink -f $(which javac)))) && \
     echo "export PATH=$JAVA_HOME/bin:$PATH" >> /etc/environment
 
 WORKDIR /app
-# Copy requirements first
 COPY requirements.txt /app/requirements.txt
 
-# Install dependencies
 RUN pip install --no-cache-dir -r /app/requirements.txt
 
-# Copy the script into the container
 COPY spark_kafka_ingestor.py /app/spark_kafka_ingestor.py
 COPY feature_store.yaml /app/feature_store.yaml
-# Run PySpark script
+COPY application_default_credentials.json /app/application_default_credentials.json
+
+ENV GOOGLE_APPLICATION_CREDENTIALS=/app/application_default_credentials.json
+
 CMD ["python", "/app/spark_kafka_ingestor.py"]

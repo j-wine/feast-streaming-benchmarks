@@ -17,6 +17,9 @@ ENV PYTHONWARNINGS="ignore"
 COPY timing_helper.py /app/
 COPY kafka_consumer.py /app/
 COPY feature_store.yaml /app/
+COPY application_default_credentials.json /app/application_default_credentials.json
+ENV GOOGLE_APPLICATION_CREDENTIALS=/app/application_default_credentials.json
+
 WORKDIR /app
 # wait for kafka broker
-CMD ["sh", "-c", "sleep 10 && python kafka_consumer.py"]
+CMD ["sh", "-c", "python kafka_consumer.py"]
