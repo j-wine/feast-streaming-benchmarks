@@ -1,26 +1,39 @@
 #!/bin/bash
-
+# project was cloned into ~
+cd ~/feast-streaming-benchmarks
 set -e
+# --- Load repo-level .env ---
+set -o allexport
+source .env
+set +o allexport
 
 # --- CONFIG ---
 CREDENTIALS_PATH=~/application_default_credentials.json
 RESULTS_ROOT=~/benchmark_results
-PROCESSING_START_SECOND=30
-ONLINE_STORE=redis
-OPERATING_SYSTEM=linux
-MACHINE=local
-
 
 BENCHMARK_CONFIGS=(
-# EPS INTERVAL ROWS FEATURES
-  "100 1 1000 10"
-  "100 1 1000 100"
-  "500 1 5000 50"
-  "500 1 5000 100"
-  "1000 1 10000 100"
-  "2500 1 25000 10"
-  "2500 1 25000 100"
-  "2500 1 25000 250"
+  # EPS INTERVAL ROWS FEATURES
+  "100 1 6000 10"
+  "100 1 12000 10"
+  "100 1 18000 10"
+  "100 1 6000 100"
+  "100 1 12000 100"
+  "100 1 18000 100"
+  "100 1 6000 250"
+  "100 1 12000 250"
+  "100 1 18000 250"
+
+  "500 1 30000 10"
+  "500 1 30000 100"
+  "500 1 30000 250"
+
+  "1000 1 60000 10"
+  "1000 1 60000 100"
+  "1000 1 60000 250"
+
+  "2500 1 150000 10"
+  "2500 1 150000 100"
+  "2500 1 150000 250"
 )
 
 wait_until_second() {

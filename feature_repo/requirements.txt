@@ -12,10 +12,3 @@ feast[postgres,redis]==0.47.0
 pyspark==3.5.0
 python-dateutil
 distributed==2024.4.1
-redis>=4.2.2,<5
-hiredis>=2.0.0,<3
-
-
-
-
-
