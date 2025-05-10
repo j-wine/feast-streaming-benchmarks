@@ -4,14 +4,11 @@ dill==0.3.9
 protobuf==5.29.3
 numpy==1.26.4
 pandas==2.2.3
-pyspark==3.5.0
 pyarrow==18.0.0
 pydantic==2.10.6
 requests==2.32.3
 kafka-python==2.0.2
-feast[postgres,gcp]==0.47.0
+feast[postgres,redis]==0.47.0
+pyspark==3.5.0
 python-dateutil
-
-
-
-
+distributed==2024.4.1
