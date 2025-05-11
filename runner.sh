@@ -60,7 +60,7 @@ wait_until_second() {
 mkdir -p "$RESULTS_ROOT"
 
 # --- One-time parquet generation ---
-echo "[1] Activating virtualenv and generating parquet files..."
+echo "[1] Generating parquet files..."
 #source redis/bin/activate
 python generate_parquet_files.py
 
@@ -84,7 +84,7 @@ ENTITY_PER_SECOND=$EPS
 PROCESSING_INTERVAL=$INTERVAL
 ROWS=$ROWS
 FEATURES=$FEATURES
-PROCESSING_START=$PROCESSING_START_SECOND
+PROCESSING_START=$PROCESSING_START
 FEATURE_VIEW_NAME=stream_view_${FEATURES}in_${FEATURES}out
 EOF
 
@@ -101,7 +101,7 @@ EOF
 
   wait_until_second
 
-  echo "[INFO] Starting benchmark containers at second $PROCESSING_START_SECOND..."
+  echo "[INFO] Starting benchmark containers at second $PROCESSING_START..."
   docker compose up -d kafka_producer kafka_consumer spark_ingestor
 
   docker wait kafka_consumer
@@ -114,6 +114,7 @@ EOF
   results_dir="$RESULTS_ROOT/localbranch_${ONLINE_STORE}_${EPS}eps_${INTERVAL}s_${ROWS}rows_${FEATURES}f_$timestamp"
   mkdir -p "$results_dir"
   cp logs/* "$results_dir/" || true
+  cp local/merged_log.csv "$results_dir/" || true
   cp plots/* "$results_dir/" 2>/dev/null || true
 
   rm -f logs/*
