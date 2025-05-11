@@ -43,6 +43,7 @@ wait_until_second() {
   target_second=$(( (60 + PROCESSING_START_SECOND - 30) % 60 ))
   now=$(date +%s)
   current_second=$(date +%S)
+  current_second=$((10#$current_second)) # fixed error due to leading zero: value too great for base (error token is "08")
   seconds_to_wait=$(( (60 + target_second - current_second) % 60 ))
 
   # If we're too close, wait for the next cycle
@@ -50,7 +51,7 @@ wait_until_second() {
     seconds_to_wait=$((seconds_to_wait + 60))
   fi
 
-  echo "🕒 Waiting $seconds_to_wait seconds to align with container start time (target=$target_second, PROCESSING_START=$PROCESSING_START_SECOND)..."
+  echo "🕒 Waiting $seconds_to_wait seconds to align with container start time (target=$target_second, PROCESSING_START=$PROCESSING_START)..."
   sleep "$seconds_to_wait"
 }
 
