@@ -5,7 +5,8 @@ numpy==1.26.4
 pandas==2.2.3
 pyarrow==18.0.0
 requests==2.32.3
-feast[postgres,snowflake]==0.47.0
 pyspark==3.5.0
 kafka-python==2.0.2
 zipp==3.21.0
+dask[dataframe]
+

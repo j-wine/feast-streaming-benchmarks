@@ -1,6 +1,5 @@
 # Use the official Python 3.10 image
-FROM python:3.10.11
-
+FROM feast-sdk-dev:latest
 # Set environment variables
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONWARNINGS="ignore"
