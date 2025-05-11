@@ -1,4 +1,4 @@
-FROM feast-sdk-dev:latest
+FROM feast-sdk-dev-snowflake-autocommit:latest
 
 RUN apt-get update && apt-get install -y \
     cmake \

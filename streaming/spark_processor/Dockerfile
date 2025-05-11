@@ -1,4 +1,5 @@
-FROM feast-sdk-dev:latest
+FROM feast-sdk-dev-snowflake-autocommit:latest
+
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONWARNINGS="ignore"
 RUN apt-get update && \
