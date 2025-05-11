@@ -112,7 +112,6 @@ def plot_latency_stats(stats, is_grouped, eps, interval, rows, input_features, o
         output_file = f"lat_{operating_system}_{online_store}_{mode}_{eps}eps_{interval}s_{rows}rows_{input_features}in_{output_features}out.png"
     full_path = os.path.join("local/plots/", output_file)
     plt.savefig(full_path)
-    plt.show()
 
 
 def plot_latency_over_time(df, is_grouped, eps, interval, rows, input_features, output_features, online_store="redis",operating_system="linux" ,output_file=None):
@@ -136,7 +135,6 @@ def plot_latency_over_time(df, is_grouped, eps, interval, rows, input_features, 
     plt.tight_layout()
     full_path = os.path.join("local/plots/", output_file)
     plt.savefig(full_path)
-    plt.show()
 
 if __name__ == "__main__":
     load_dotenv()
