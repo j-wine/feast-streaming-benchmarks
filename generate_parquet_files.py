@@ -3,6 +3,9 @@ import pandas as pd
 import numpy as np
 from pathlib import Path
 
+FEATURES = 250 # set rows to highest amount used in benchmark
+ROWS = 750_000 # set rows to highest amount used in benchmark
+# bench_duration_in_seconds * EPS <= ROWS
 def generate_data(num_entities: int, num_features: int) -> pd.DataFrame:
     features = [f"feature_{i}" for i in range(num_features)]
     columns = ["benchmark_entity", "event_timestamp"] + features
@@ -15,13 +18,12 @@ def generate_data(num_entities: int, num_features: int) -> pd.DataFrame:
     feature_data = np.random.randint(1, num_entities, size=(num_entities, num_features))
     for i, feat in enumerate(features):
         df[feat] = feature_data[:, i]
-        df['sum'] = feature_data[:, i]
     return df
 
 if __name__ == "__main__":
     output_path = Path(__file__).parent / "feature_repo/offline_data/generated_data.parquet"
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    df = generate_data(num_entities=50, num_features=10)
+    df = generate_data(num_entities=ROWS, num_features=FEATURES)
     df.to_parquet(output_path, index=False)
     print(f"✅ Generated {output_path}")

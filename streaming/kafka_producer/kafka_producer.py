@@ -5,17 +5,18 @@ from pathlib import Path
 import pandas as pd
 from kafka import KafkaProducer
 from kafka.errors import UnknownTopicOrPartitionError, KafkaError
-
+import os
 import timing_helper
 
-# --- Parameters ---
-BENCHMARK_ROWS = 100 # Number of datapoints send
-ENTITY_PER_SECOND = 10
-BENCHMARK_FEATURES = 10  # Number of features to include per entity
+# --- Benchmark Parameters ---
+BENCHMARK_FEATURES_IN = int(os.getenv("FEATURES"))
+BENCHMARK_ROWS = int(os.getenv("ROWS"))
+ENTITY_PER_SECOND = int(os.getenv("ENTITY_PER_SECOND"))
+# second of the minute for producer to start sending.
+PROCESSING_START=int(os.getenv("PROCESSING_START",30))
 
 BENCHMARK_TOPIC = "benchmark_entity_topic"
 KAFKA_BROKERS = ["broker-1:9092"]
-PROCESSING_START = 30 # second of the minute to start sending
 
 def wait_for_kafka_topic(producer, topic, retries=150, delay=0.1):
     dummy_message = {"check": "ping"}
@@ -30,7 +31,7 @@ def wait_for_kafka_topic(producer, topic, retries=150, delay=0.1):
             print("❌ Topic not found yet. Waiting...")
             time.sleep(delay)
         except KafkaError as e:
-            print(f"⚠️ Kafka error: {e}. Retrying...")
+            print(f" Kafka error: {e}. Retrying...")
             time.sleep(delay)
     raise RuntimeError(f"❌ Kafka topic '{topic}' not available after {retries} attempts.")
 
@@ -40,7 +41,7 @@ def read_benchmark_data():
     df = pd.read_parquet(parquet_file)
     df = df.sort_values("benchmark_entity")
 
-    feature_cols = [f"feature_{i}" for i in range(BENCHMARK_FEATURES)]
+    feature_cols = [f"feature_{i}" for i in range(BENCHMARK_FEATURES_IN)]
     selected_cols = ["benchmark_entity", "event_timestamp"] + feature_cols
     df = df[selected_cols].copy()
     return df.head(BENCHMARK_ROWS)
@@ -53,7 +54,7 @@ def produce_kafka_messages():
     wait_for_kafka_topic(producer, BENCHMARK_TOPIC)
 
     benchmark_df = read_benchmark_data()
-    feature_columns = [f"feature_{i}" for i in range(BENCHMARK_FEATURES)]
+    feature_columns = [f"feature_{i}" for i in range(BENCHMARK_FEATURES_IN)]
 
     print("Writing benchmark data to Kafka...")
     timing_helper.wait_until_second(PROCESSING_START)
