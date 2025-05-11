@@ -113,6 +113,7 @@ EOF
   results_dir="$RESULTS_ROOT/localbranch_${ONLINE_STORE}_${EPS}eps_${INTERVAL}s_${ROWS}rows_${FEATURES}f_$timestamp"
   mkdir -p "$results_dir"
   cp logs/* "$results_dir/" || true
+  cp local/merged_log.csv "$results_dir/" || true
   cp plots/* "$results_dir/" 2>/dev/null || true
 
   rm -f logs/*
