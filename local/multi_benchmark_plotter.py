@@ -3,13 +3,28 @@ import re
 from datetime import datetime
 import matplotlib.pyplot as plt
 import numpy as np
-from .plotting import compute_latency_stats
+import pandas as pd
 
 BENCHMARK_ROOT = os.path.expanduser("~/benchmark_results")
 OUTPUT_DIR = os.path.join(BENCHMARK_ROOT, "comparative_plots")
 print(OUTPUT_DIR)
 LATENCY_COLUMN = "preprocess_until_poll"
 
+# compute latency in ms
+def compute_latency_stats(csv_path, column="preprocess_until_poll"):
+    df = pd.read_csv(csv_path, sep=";")
+    df[column] = df[column].astype(str).str.replace(",", ".").astype(float)
+    df = df[df[column] >= 0]
+    latencies = df[column] * 1000
+    return {
+        "min": latencies.min(),
+        "mean": latencies.mean(),
+        "p50": latencies.median(),
+        "p90": latencies.quantile(0.9),
+        "p95": latencies.quantile(0.95),
+        "p99": latencies.quantile(0.99),
+        "max": latencies.max(),
+    }
 
 def parse_benchmark_folder_name(name):
     # Format: localbranch_redis_2500eps_1s_25000rows_10f_20250509_233007
