@@ -1,4 +1,4 @@
-FROM feast-sdk-dev-snowflake-autocommit:latest
+FROM feast-sdk-dev-snowflake-autocommit-merge
 
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONWARNINGS="ignore"

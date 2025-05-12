@@ -83,7 +83,7 @@ ENTITY_PER_SECOND=$EPS
 PROCESSING_INTERVAL=$INTERVAL
 ROWS=$ROWS
 FEATURES=$FEATURES
-PROCESSING_START=$PROCESSING_START_SECOND
+PROCESSING_START=$PROCESSING_START
 FEATURE_VIEW_NAME=stream_view_${FEATURES}in_${FEATURES}out
 EOF
 
@@ -96,11 +96,11 @@ EOF
   docker compose build
 
   echo "[INFO] Starting infrastructure services..."
-  docker compose up -d redis registry zookeeper broker-1 feature_server
+  docker compose up -d registry zookeeper broker-1 feature_server
 
   wait_until_second
 
-  echo "[INFO] Starting benchmark containers at second $PROCESSING_START_SECOND..."
+  echo "[INFO] Starting benchmark containers at second $PROCESSING_START..."
   docker compose up -d kafka_producer kafka_consumer spark_ingestor
 
   docker wait kafka_consumer

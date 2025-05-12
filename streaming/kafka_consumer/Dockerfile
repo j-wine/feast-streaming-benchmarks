@@ -1,5 +1,4 @@
-FROM feast-sdk-dev-snowflake-autocommit:latest
-
+FROM feast-sdk-dev-snowflake-autocommit-merge
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
