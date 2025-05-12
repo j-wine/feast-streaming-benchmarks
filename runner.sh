@@ -11,8 +11,8 @@ BRANCHES=(
   automated-bigtable-gcp
   automated-dragonfly
   automated-redis
-  automated-mysql
-  automated-postgres
+#  automated-mysql
+#  automated-postgres
 )
 
 BENCHMARK_CONFIGS=(
