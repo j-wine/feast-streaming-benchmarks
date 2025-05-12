@@ -1,7 +1,8 @@
 # --- CONFIG ---
 PYTHON_VERSION=3.10.13
 REPO_URL=https://github.com/j-wine/feast-streaming-benchmarks.git
-BRANCHES=(automated-bigtable-gcp automated-dragonfly automated-redis automated-mysql automated-postgres)
+BRANCHES=(automated-bigtable-gcp automated-dragonfly automated-redis)
+#  automated-mysql automated-postgres
 VENV_NAME=feastbench
 CURRENT_USER=$(whoami)
 CREDENTIALS_PATH="/home/${CURRENT_USER}/application_default_credentials.json"
