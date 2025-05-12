@@ -102,7 +102,27 @@ EOF
     set +o allexport
 
     docker compose build
-    docker compose up -d redis registry zookeeper broker-1 feature_server
+    # --- Start online store service ---
+    case "$ONLINE_STORE" in
+      redis|dragonfly)
+        docker compose up -d redis
+        ;;
+      postgres)
+        docker compose up -d postgres
+        ;;
+      mysql)
+        docker compose up -d mysql
+        ;;
+      bigtable)
+        echo "ℹ️ Skipping online store container for Bigtable (external service)"
+        ;;
+      *)
+        echo "❌ Unknown ONLINE_STORE: $ONLINE_STORE"
+        exit 1
+        ;;
+    esac
+
+    docker compose up -d registry zookeeper broker-1 feature_server
 
     wait_until_second
 
