@@ -3,7 +3,7 @@ import re
 from datetime import datetime
 import matplotlib.pyplot as plt
 import numpy as np
-import pandas as pd
+from .plotting import compute_latency_stats
 
 BENCHMARK_ROOT = os.path.expanduser("~/benchmark_results")
 OUTPUT_DIR = os.path.join(BENCHMARK_ROOT, "comparative_plots")
@@ -54,19 +54,7 @@ def group_for_comparison(latest_benchmarks):
     return group_by_store, group_by_eps
 
 
-def compute_latency_stat(csv_path, column=LATENCY_COLUMN):
-    df = pd.read_csv(csv_path, sep=";")
-    df[column] = df[column].astype(str).str.replace(",", ".").astype(float)
-    df = df[df[column] >= 0]
-    return {
-        "min": df[column].min(),
-        "mean": df[column].mean(),
-        "p50": df[column].median(),
-        "p90": df[column].quantile(0.9),
-        "p95": df[column].quantile(0.95),
-        "p99": df[column].quantile(0.99),
-        "max": df[column].max(),
-    }
+
 
 
 def plot_comparison_bar(stats_by_label, title, output_path):
@@ -80,7 +68,7 @@ def plot_comparison_bar(stats_by_label, title, output_path):
         plt.bar(x + i * width, vals, width, label=label)
 
     plt.xticks(x + width, metrics)
-    plt.ylabel("Latency (seconds)")
+    plt.ylabel("Latency (milliseconds)")
     plt.title(title)
     plt.grid(True)
     plt.legend()
@@ -89,6 +77,15 @@ def plot_comparison_bar(stats_by_label, title, output_path):
     plt.savefig(output_path)
     print(f"✅ Saved comparison plot: {output_path}")
     plt.close()
+
+
+def export_stats_to_csv(stats_by_label, output_csv):
+    df = pd.DataFrame.from_dict(stats_by_label, orient="index")
+    df.index.name = "benchmark"
+    os.makedirs(os.path.dirname(output_csv), exist_ok=True)
+    df.to_csv(output_csv, sep=";")
+    print(f"📄 Exported latency stats to: {output_csv}")
+
 
 
 def run_comparative_plotting():
@@ -103,10 +100,13 @@ def run_comparative_plotting():
             label = run["meta"]["store"]
             merged_csv = os.path.join(run["path"], "merged_log.csv")
             if os.path.exists(merged_csv):
-                stats[label] = compute_latency_stat(merged_csv)
+                stats[label] = compute_latency_stats(merged_csv)
         if stats:
             plot_path = os.path.join(OUTPUT_DIR, f"latency_store_{name}.png")
             plot_comparison_bar(stats, f"Latency by Online Store — {name}", plot_path)
+
+            csv_path = os.path.join(OUTPUT_DIR, f"latency_store_{name}.csv")
+            export_stats_to_csv(stats, csv_path)
 
     for name, group in eps_groups.items():
         if len(group) < 2:
@@ -116,11 +116,14 @@ def run_comparative_plotting():
             label = f'{run["meta"]["eps"]} EPS'
             merged_csv = os.path.join(run["path"], "merged_log.csv")
             if os.path.exists(merged_csv):
-                stats[label] = compute_latency_stat(merged_csv)
+                stats[label] = compute_latency_stats(merged_csv)
         if stats:
             print(OUTPUT_DIR)
             plot_path = os.path.join(OUTPUT_DIR, f"latency_eps_{name}.png")
             plot_comparison_bar(stats, f"Latency by EPS — {name}", plot_path)
+
+            csv_path = os.path.join(OUTPUT_DIR, f"latency_eps_{name}.csv")
+            export_stats_to_csv(stats, csv_path)
 
 
 if __name__ == "__main__":
