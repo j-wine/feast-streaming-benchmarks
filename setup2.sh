@@ -1,14 +1,13 @@
 # --- CONFIG ---
 PYTHON_VERSION=3.10.13
-VENV_NAME=gcp
 REPO_URL=https://github.com/j-wine/feast-streaming-benchmarks.git
-REPO_BRANCH=benchmark-v3-timings-100-features-linux-bigtable-gcp
-
-# google username folder contains file upload of credentials
+BRANCHES=(automated-bigtable-gcp automated-dragonfly automated-redis)
+#  automated-mysql automated-postgres
+VENV_NAME=feastbench
 CURRENT_USER=$(whoami)
 CREDENTIALS_PATH="/home/${CURRENT_USER}/application_default_credentials.json"
-# --- PYTHON INSTALL ---
-echo "[3/9] Installing Python $PYTHON_VERSION from source..."
+
+echo "[1] Installing Python $PYTHON_VERSION..."
 cd /usr/src
 sudo curl -O https://www.python.org/ftp/python/$PYTHON_VERSION/Python-$PYTHON_VERSION.tgz
 sudo tar -xf Python-$PYTHON_VERSION.tgz
@@ -17,39 +16,40 @@ sudo ./configure --enable-optimizations
 sudo make -j$(nproc)
 sudo make altinstall
 
-# --- CLONE REPO ---
-echo "[4/9] Cloning benchmark repo..."
+# Create virtualenv
 cd ~
-git clone --branch $REPO_BRANCH $REPO_URL
-cd feast-streaming-benchmarks
-
-# --- PYTHON VENV SETUP ---
-echo "[5/9] Creating virtualenv ($VENV_NAME) with Python 3.10..."
+echo "[2] Creating virtualenv..."
 /usr/local/bin/python3.10 -m venv $VENV_NAME
 source $VENV_NAME/bin/activate
 which python
 python --version
-# --- FIX LOG PERMISSIONS ---
-echo "[6/9] Setting log, plots directory permissions..."
-mkdir -p logs local
-chmod a+rwx logs local
-
-# --- INSTALL REQUIREMENTS ---
-echo "[6/9] Installing Python dependencies..."
-cd local
 pip install --upgrade pip
-pip install -r requirements.txt
-cd ..
 
-# --- VALIDATE CREDENTIALS FILE ---
-echo "[7/9] Validating GCP credentials file path..."
-if [ ! -f "$CREDENTIALS_PATH" ]; then
-  echo "❌ ERROR: GCP credentials file not found at $CREDENTIALS_PATH"
-  exit 1
-fi
+# Clone and prep each repo
+for BRANCH in "${BRANCHES[@]}"; do
+  echo "[3] Cloning branch $BRANCH..."
+  DIR="feast-streaming-benchmarks-$BRANCH"
+  git clone --branch $BRANCH $REPO_URL "$DIR"
+  cd "$DIR"
 
- # --- COPY GCP CREDENTIALS INTO CONTAINERS ---
-  echo "[9] Copying GCP credentials into container contexts..."
-  for svc in streaming/kafka_consumer feature_repo streaming/spark_processor; do
-    cp "$CREDENTIALS_PATH" "$svc/application_default_credentials.json"
-  done
+  echo "[5] Preparing folders..."
+  mkdir -p logs local
+  chmod a+rwx logs local
+
+
+
+  if [[ "$BRANCH" == *"bigtable"* && -f "$CREDENTIALS_PATH" ]]; then
+    echo "[6] Injecting GCP credentials for $BRANCH..."
+    for svc in streaming/kafka_consumer feature_repo streaming/spark_processor; do
+      cp "$CREDENTIALS_PATH" "$svc/application_default_credentials.json"
+    done
+  fi
+
+  cd ..
+done
+# --- Install dependencies once from one repo ---
+cd feast-streaming-benchmarks-automated-redis # or any branch folder
+pip install -r local/requirements.txt
+cd ~
+
+echo "✅ Setup complete for all branches."
