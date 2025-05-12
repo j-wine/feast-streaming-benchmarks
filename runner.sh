@@ -130,7 +130,7 @@ EOF
     docker wait kafka_consumer
 
     docker logs spark_ingestor >> logs/spark_log
-
+    mkdir -p local/plots
     python local/log_merger.py
     python local/plotting.py
 
