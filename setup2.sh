@@ -2,8 +2,7 @@
 PYTHON_VERSION=3.10.13
 VENV_NAME=gcp
 REPO_URL=https://github.com/j-wine/feast-streaming-benchmarks.git
-REPO_BRANCH=benchmark-v3-timings-100-features-linux-bigtable-gcp
-
+REPO_BRANCH=automated-bigtable-gcp
 # google username folder contains file upload of credentials
 CURRENT_USER=$(whoami)
 CREDENTIALS_PATH="/home/${CURRENT_USER}/application_default_credentials.json"
