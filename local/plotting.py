@@ -65,13 +65,12 @@ def analyze_thread_stats_vs_latency(thread_csv, latency_csv, is_grouped=True, ep
     plt.savefig(filename2)
     print(f"📈 Saved: {filename2}")
 
-# compute latency in ms
-def compute_latency_stats(csv_path, column="preprocess_until_poll"):
+def compute_latency_stats_tuple(csv_path, column="preprocess_until_poll"):
     df = pd.read_csv(csv_path, sep=";")
     df[column] = df[column].astype(str).str.replace(",", ".").astype(float)
     df = df[df[column] >= 0]
     latencies = df[column] * 1000
-    return {
+    stats = {
         "min": latencies.min(),
         "mean": latencies.mean(),
         "p50": latencies.median(),
@@ -80,6 +79,7 @@ def compute_latency_stats(csv_path, column="preprocess_until_poll"):
         "p99": latencies.quantile(0.99),
         "max": latencies.max(),
     }
+    return stats, df
 
 
 
@@ -152,7 +152,7 @@ if __name__ == "__main__":
     output_features = input_features
     is_grouped = True
     online_store = os.getenv("ONLINE_STORE")
-    latency_stats, df_filtered = compute_latency_stats(csv_path, column)
+    latency_stats, df_filtered = compute_latency_stats_tuple(csv_path, column)
     #
     plot_latency_stats(latency_stats, is_grouped, eps, interval, rows, input_features, output_features,online_store,operating_system)
     plot_latency_over_time(df_filtered, is_grouped, eps, interval, rows, input_features, output_features,online_store,operating_system)
