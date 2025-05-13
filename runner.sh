@@ -133,7 +133,7 @@ EOF
         docker compose up -d redis
         ;;
       postgres)
-        docker compose up -d postgres
+        docker compose up -d postgres_online
         ;;
       mysql)
         docker compose up -d mysql
