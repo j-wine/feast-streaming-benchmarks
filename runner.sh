@@ -8,11 +8,11 @@ REPO_BASE=feast-streaming-benchmarks
 VENV_PATH=~/feastbench
 DRY_RUN=${DRY_RUN:-false}
 BRANCHES=(
+  automated-mysql
+  automated-postgres
   automated-bigtable-gcp
   automated-dragonfly
   automated-redis
-  automated-mysql
-  automated-postgres
 )
 # short durations
 #BENCHMARK_CONFIGS=(
