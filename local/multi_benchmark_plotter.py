@@ -27,12 +27,13 @@ def compute_latency_stats(csv_path, column="preprocess_until_poll"):
     }
 
 def parse_benchmark_folder_name(name):
-    # Format: localbranch_redis_2500eps_1s_25000rows_10f_20250509_233007
-    pattern = r"(?P<prefix>.+?)_(?P<store>[^_]+)_(?P<eps>\d+)eps_(?P<interval>\d+)s_(?P<rows>\d+)rows_(?P<features>\d+)f_(?P<ts>\d{8}_\d{6})"
+    # Updated regex: makes the optional prefix (e.g., "localbranch") truly optional
+    pattern = r"(?:(?P<prefix>[^_]+)_)?(?P<store>[^_]+)_(?P<eps>\d+)eps_(?P<interval>\d+)s_(?P<rows>\d+)rows_(?P<features>\d+)f_(?P<ts>\d{8}_\d{6})"
     match = re.match(pattern, name)
     if not match:
         return None
     info = match.groupdict()
+    info["prefix"] = info["prefix"] or ""  # fallback to empty if no prefix
     info["timestamp"] = datetime.strptime(info["ts"], "%Y%m%d_%H%M%S")
     return info
 
@@ -46,7 +47,8 @@ def load_latest_benchmarks(root):
         meta = parse_benchmark_folder_name(entry)
         if not meta:
             continue
-        key = f'{meta["prefix"]}_{meta["store"]}_{meta["eps"]}eps_{meta["interval"]}s_{meta["rows"]}rows_{meta["features"]}f'
+        key = f'{meta["store"]}_{meta["eps"]}eps_{meta["interval"]}s_{meta["rows"]}rows_{meta["features"]}f'
+
         existing = benchmarks_by_key.get(key)
         if not existing or meta["timestamp"] > existing["meta"]["timestamp"]:
             benchmarks_by_key[key] = {"meta": meta, "path": full_path}
