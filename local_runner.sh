@@ -12,47 +12,42 @@ CREDENTIALS_PATH=~/application_default_credentials.json
 RESULTS_ROOT=~/benchmark_results
 
 BENCHMARK_CONFIGS=(
-  # EPS INTERVAL ROWS FEATURES
-  "100 1 6000 10"
-  "100 1 12000 10"
-  "100 1 18000 10"
-  "100 1 6000 100"
-  "100 1 12000 100"
-  "100 1 18000 100"
-  "100 1 6000 250"
-  "100 1 12000 250"
-  "100 1 18000 250"
+# eps interval rows features
+  "100 1 10000 10"
+  "100 1 10000 50"
+  "100 1 10000 100"
+  "100 1 10000 250"
 
-  "500 1 30000 10"
-  "500 1 30000 100"
-  "500 1 30000 250"
+  "500 1 50000 10"
+  "500 1 50000 50"
+  "500 1 50000 100"
+  "500 1 50000 250"
 
-  "1000 1 60000 10"
-  "1000 1 60000 100"
-  "1000 1 60000 250"
+  "1000 1 100000 10"
+  "1000 1 100000 50"
+  "1000 1 100000 100"
+  "1000 1 100000 250"
 
-  "2500 1 150000 10"
-  "2500 1 150000 100"
-  "2500 1 150000 250"
+  "2500 1 250000 10"
+  "2500 1 250000 50"
+  "2500 1 250000 100"
+  "2500 1 250000 250"
 )
 
 wait_until_second() {
-  # give container up to 30 seconds startup time
-  # If PROCESSING_START_SECOND=30, containers should start at :00
-
-  target_second=$(( (60 + PROCESSING_START_SECOND - 30) % 60 ))
-  now=$(date +%s)
+  target_second=$(( (60 + PROCESSING_START - 30) % 60 ))
   current_second=$(date +%S)
+  current_second=$((10#$current_second))
   seconds_to_wait=$(( (60 + target_second - current_second) % 60 ))
 
-  # If we're too close, wait for the next cycle
   if (( seconds_to_wait < 5 )); then
     seconds_to_wait=$((seconds_to_wait + 60))
   fi
 
-  echo "🕒 Waiting $seconds_to_wait seconds to align with container start time (target=$target_second, PROCESSING_START=$PROCESSING_START_SECOND)..."
+  echo "🕒 Waiting $seconds_to_wait seconds before starting benchmark containers..."
   sleep "$seconds_to_wait"
 }
+
 
 
 # --- Ensure results root exists ---
