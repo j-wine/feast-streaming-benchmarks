@@ -10,6 +10,179 @@ OUTPUT_DIR = os.path.join(BENCHMARK_ROOT, "comparative_plots")
 print(OUTPUT_DIR)
 LATENCY_COLUMN = "preprocess_until_poll"
 
+import seaborn as sns
+def plot_violin_latency_by_store(benchmarks):
+    violin_dir = os.path.join(OUTPUT_DIR, "violin_plots")
+    os.makedirs(violin_dir, exist_ok=True)
+
+    # Group by same EPS + ROWS + FEATURES
+    grouped = {}
+    for key, run in benchmarks.items():
+        m = run["meta"]
+        group_key = f'{m["eps"]}eps_{m["interval"]}s_{m["rows"]}rows_{m["features"]}f'
+        grouped.setdefault(group_key, []).append(run)
+
+    for name, group in grouped.items():
+        if len(group) < 2:
+            continue
+
+        df_all = []
+        for run in group:
+            csv_path = os.path.join(run["path"], "merged_log.csv")
+            if not os.path.exists(csv_path):
+                continue
+
+            df = pd.read_csv(csv_path, sep=";")
+            if LATENCY_COLUMN not in df:
+                continue
+
+            df[LATENCY_COLUMN] = df[LATENCY_COLUMN].astype(str).str.replace(",", ".").astype(float)
+            df = df[df[LATENCY_COLUMN] >= 0]
+            df["latency_ms"] = df[LATENCY_COLUMN] * 1000
+            df["store"] = run["meta"]["store"]
+            df_all.append(df[["latency_ms", "store"]])
+
+        if df_all:
+            all_df = pd.concat(df_all)
+
+            plt.figure(figsize=(10, 6))
+            sns.violinplot(data=all_df, x="store", y="latency_ms", inner="quartile", palette="muted")
+            plt.title(f"Latency Distribution by Online Store — {name}")
+            plt.ylabel("Latency (ms)")
+            plt.xlabel("Online Store")
+            plt.grid(True)
+            plt.tight_layout()
+
+            filename = f"violin_latency_store_{name}.png"
+            plt.savefig(os.path.join(violin_dir, filename))
+            plt.close()
+            print(f"🎻 Saved violin plot: {filename}")
+def plot_latency_vs_features(benchmarks, metric="mean"):
+    feature_dir = os.path.join(OUTPUT_DIR, "latency_vs_features")
+    os.makedirs(feature_dir, exist_ok=True)
+
+    # Group by store + eps + rows
+    grouped = {}
+    for key, run in benchmarks.items():
+        m = run["meta"]
+        group_key = f'{m["store"]}_{m["eps"]}eps_{m["interval"]}s_{m["rows"]}rows'
+        grouped.setdefault(group_key, []).append(run)
+
+    for name, group in grouped.items():
+        features = []
+        values = []
+        for run in sorted(group, key=lambda r: int(r["meta"]["features"])):
+            csv_path = os.path.join(run["path"], "merged_log.csv")
+            if not os.path.exists(csv_path):
+                continue
+
+            stats = compute_latency_stats(csv_path)
+            features.append(int(run["meta"]["features"]))
+            values.append(stats.get(metric, None))
+
+        if features and values:
+            plt.figure(figsize=(8, 5))
+            plt.plot(features, values, marker="o")
+            plt.title(f"{metric.capitalize()} Latency vs. Feature Count — {name}")
+            plt.xlabel("Number of Features")
+            plt.ylabel("Latency (ms)")
+            plt.grid(True)
+            plt.tight_layout()
+
+            filename = f"latency_vs_features_{metric}_{name}.png"
+            plt.savefig(os.path.join(feature_dir, filename))
+            plt.close()
+            print(f"📈 Saved feature-latency plot: {filename}")
+
+def plot_latency_distribution_per_benchmark(benchmarks):
+    dist_dir = os.path.join(OUTPUT_DIR, "distributions")
+    os.makedirs(dist_dir, exist_ok=True)
+
+    for key, run in benchmarks.items():
+        csv_path = os.path.join(run["path"], "merged_log.csv")
+        if not os.path.exists(csv_path):
+            continue
+
+        df = pd.read_csv(csv_path, sep=";")
+        if LATENCY_COLUMN not in df:
+            continue
+
+        df[LATENCY_COLUMN] = df[LATENCY_COLUMN].astype(str).str.replace(",", ".").astype(float)
+        df = df[df[LATENCY_COLUMN] >= 0]
+        latencies_ms = df[LATENCY_COLUMN] * 1000
+
+        # Compute key percentiles
+        stats = {
+            "mean": latencies_ms.mean(),
+            "p90": latencies_ms.quantile(0.9),
+            "p99": latencies_ms.quantile(0.99)
+        }
+
+        plt.figure(figsize=(10, 6))
+        sns.histplot(latencies_ms, bins=50, kde=True, color="steelblue", alpha=0.6)
+
+        for label, val in stats.items():
+            plt.axvline(val, linestyle="--", label=f"{label}: {val:.1f} ms")
+
+        plt.xlabel("Latency (ms)")
+        plt.ylabel("Frequency")
+        meta = run["meta"]
+        title = f"{meta['store']} — {meta['eps']} EPS, {meta['features']}F, {meta['rows']} rows"
+        plt.title(title)
+        plt.legend()
+        plt.grid(True)
+        plt.tight_layout()
+
+        filename = f"latency_dist_{meta['store']}_{meta['eps']}eps_{meta['features']}f_{meta['rows']}rows.png"
+        plt.savefig(os.path.join(dist_dir, filename))
+        plt.close()
+        print(f"📉 Distribution plotted: {filename}")
+
+def plot_latency_vs_eps_by_store():
+    latest_benchmarks = load_latest_benchmarks(BENCHMARK_ROOT)
+    from collections import defaultdict
+
+    # Group by fixed (interval, rows, features), then vary store and eps
+    grouped = defaultdict(lambda: defaultdict(dict))  # key → eps → store → stats
+
+    for key, run in latest_benchmarks.items():
+        meta = run["meta"]
+        group_key = f'{meta["interval"]}s_{meta["rows"]}rows_{meta["features"]}f'
+        eps = int(meta["eps"])
+        store = meta["store"]
+        merged_csv = os.path.join(run["path"], "merged_log.csv")
+        if os.path.exists(merged_csv):
+            stats = compute_latency_stats(merged_csv)
+            grouped[group_key][eps][store] = stats
+
+    for group_key, eps_dict in grouped.items():
+        # Get all EPS levels and stores
+        sorted_eps = sorted(eps_dict.keys())
+        all_stores = sorted({store for eps_stats in eps_dict.values() for store in eps_stats})
+
+        for metric in ["min", "mean", "p50", "p90", "p95", "p99", "max"]:
+            plt.figure(figsize=(12, 6))
+
+            for store in all_stores:
+                y = [eps_dict[eps].get(store, {}).get(metric, np.nan) for eps in sorted_eps]
+                plt.plot(sorted_eps, y, marker='o', label=store)
+
+            plt.xlabel("EPS (Entities per Second)")
+            plt.ylabel(f"Latency ({metric}) [ms]")
+            plt.title(f"Latency ({metric}) vs EPS — {group_key}")
+            plt.grid(True)
+            plt.legend()
+            plt.tight_layout()
+
+            output_file = os.path.join(
+                OUTPUT_DIR,
+                f"latency_metric_{metric}_{group_key}.png"
+            )
+            os.makedirs(os.path.dirname(output_file), exist_ok=True)
+            plt.savefig(output_file)
+            print(f"📊 Saved EPS comparison: {output_file}")
+            plt.close()
+
 # compute latency in ms
 def compute_latency_stats(csv_path, column="preprocess_until_poll"):
     df = pd.read_csv(csv_path, sep=";")
@@ -145,3 +318,9 @@ def run_comparative_plotting():
 
 if __name__ == "__main__":
     run_comparative_plotting()
+    plot_latency_vs_eps_by_store()
+    benchmarks = load_latest_benchmarks(BENCHMARK_ROOT)
+    plot_latency_distribution_per_benchmark(benchmarks)
+    plot_violin_latency_by_store(benchmarks)
+    for metric in ["min", "mean", "p50", "p90", "p95", "p99"]:
+        plot_latency_vs_features(benchmarks, metric)
