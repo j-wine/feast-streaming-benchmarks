@@ -4,3 +4,4 @@ pandas
 dotenv
 pyarrow
 fastparquet
+seaborn
