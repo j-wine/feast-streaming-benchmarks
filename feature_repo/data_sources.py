@@ -18,6 +18,16 @@ benchmark_batch_source = FileSource(
     path="offline_data/generated_data.parquet",
     timestamp_field="event_timestamp",
 )
+benchmark_stream_source_1_features = KafkaSource(
+    name="benchmark_stream_source_1_features",
+    kafka_bootstrap_servers="broker-1:9092",
+    topic=BENCHMARK_TOPIC,
+    timestamp_field="event_timestamp",
+    batch_source=benchmark_batch_source,
+    message_format=JsonFormat(schema_json=generate_schema_json(1)),
+    watermark_delay_threshold=timedelta(minutes=5),
+)
+
 
 benchmark_stream_source_10_features = KafkaSource(
     name="benchmark_stream_source_10_features",
