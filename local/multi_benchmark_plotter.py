@@ -11,6 +11,56 @@ print(OUTPUT_DIR)
 LATENCY_COLUMN = "preprocess_until_poll"
 
 import seaborn as sns
+def plot_latency_vs_eps_same_duration():
+    latest_benchmarks = load_latest_benchmarks(BENCHMARK_ROOT)
+    from collections import defaultdict
+
+    # Group by interval + duration + features
+    grouped = defaultdict(lambda: defaultdict(dict))  # key → eps → store → stats
+
+    for key, run in latest_benchmarks.items():
+        meta = run["meta"]
+        interval = int(meta["interval"])
+        eps = int(meta["eps"])
+        rows = int(meta["rows"])
+        features = int(meta["features"])
+        duration = rows // eps
+        group_key = f'{interval}s_{duration}s_{features}f'
+
+        store = meta["store"]
+        merged_csv = os.path.join(run["path"], "merged_log.csv")
+        if os.path.exists(merged_csv):
+            stats = compute_latency_stats(merged_csv)
+            grouped[group_key][eps][store] = stats
+
+    for group_key, eps_dict in grouped.items():
+        sorted_eps = sorted(eps_dict.keys())
+        all_stores = sorted({store for eps_stats in eps_dict.values() for store in eps_stats})
+
+        for metric in ["min", "mean", "p50", "p90", "p95", "p99", "max"]:
+            plt.figure(figsize=(12, 6))
+
+            for store in all_stores:
+                y = [eps_dict[eps].get(store, {}).get(metric, np.nan) for eps in sorted_eps]
+                plt.plot(sorted_eps, y, marker='o', label=store)
+
+            plt.xlabel("EPS (Entities per Second)")
+            plt.ylabel(f"Latency ({metric}) [ms]")
+            plt.title(f"Latency ({metric}) vs EPS (Same Duration) — {group_key}")
+            plt.grid(True)
+            plt.legend()
+            plt.tight_layout()
+
+            output_file = os.path.join(
+                OUTPUT_DIR,
+                f"latency_vs_eps_duration_{metric}_{group_key}.png"
+            )
+            os.makedirs(os.path.dirname(output_file), exist_ok=True)
+            plt.savefig(output_file)
+            print(f"🕒 Saved same-duration EPS plot: {output_file}")
+            plt.close()
+
+
 def plot_violin_latency_by_store(benchmarks):
     violin_dir = os.path.join(OUTPUT_DIR, "violin_plots")
     os.makedirs(violin_dir, exist_ok=True)
