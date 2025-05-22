@@ -201,51 +201,6 @@ def plot_latency_distribution_per_benchmark(benchmarks):
         plt.close()
         print(f"📉 Distribution plotted: {filename}")
 
-def plot_latency_vs_eps_by_store():
-    latest_benchmarks = load_latest_benchmarks(BENCHMARK_ROOT)
-    from collections import defaultdict
-
-    # Group by fixed (interval, rows, features), then vary store and eps
-    grouped = defaultdict(lambda: defaultdict(dict))  # key → eps → store → stats
-
-    for key, run in latest_benchmarks.items():
-        meta = run["meta"]
-        group_key = f'{meta["interval"]}s_{meta["rows"]}rows_{meta["features"]}f'
-        eps = int(meta["eps"])
-        store = meta["store"]
-        merged_csv = os.path.join(run["path"], "merged_log.csv")
-        if os.path.exists(merged_csv):
-            stats = compute_latency_stats(merged_csv)
-            grouped[group_key][eps][store] = stats
-
-    for group_key, eps_dict in grouped.items():
-        # Get all EPS levels and stores
-        sorted_eps = sorted(eps_dict.keys())
-        all_stores = sorted({store for eps_stats in eps_dict.values() for store in eps_stats})
-
-        for metric in ["min", "mean", "p50", "p90", "p95", "p99", "max"]:
-            plt.figure(figsize=(12, 6))
-
-            for store in all_stores:
-                y = [eps_dict[eps].get(store, {}).get(metric, np.nan) for eps in sorted_eps]
-                plt.plot(sorted_eps, y, marker='o', label=store)
-
-            plt.xlabel("EPS (Entities per Second)")
-            plt.ylabel(f"Latency ({metric}) [ms]")
-            plt.title(f"Latency ({metric}) vs EPS — {group_key}")
-            plt.grid(True)
-            plt.legend()
-            plt.tight_layout()
-
-            output_file = os.path.join(
-                OUTPUT_DIR,
-                f"latency_metric_{metric}_{group_key}.png"
-            )
-            os.makedirs(os.path.dirname(output_file), exist_ok=True)
-            plt.savefig(output_file)
-            print(f"📊 Saved EPS comparison: {output_file}")
-            plt.close()
-
 # compute latency in ms
 def compute_latency_stats(csv_path, column="preprocess_until_poll"):
     df = pd.read_csv(csv_path, sep=";")
@@ -381,9 +336,10 @@ def run_comparative_plotting():
 
 if __name__ == "__main__":
     run_comparative_plotting()
-    plot_latency_vs_eps_by_store()
     benchmarks = load_latest_benchmarks(BENCHMARK_ROOT)
     plot_latency_distribution_per_benchmark(benchmarks)
     plot_violin_latency_by_store(benchmarks)
+    plot_latency_vs_eps_by_store(mode="same_duration")
+    plot_latency_vs_eps_by_store(mode="same_rows")
     for metric in ["min", "mean", "p50", "p90", "p95", "p99"]:
         plot_latency_vs_features(benchmarks, metric)
