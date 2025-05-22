@@ -11,7 +11,7 @@ import timing_helper
 # --- Parameters ---
 BENCHMARK_ROWS = 10_000 # Number of datapoints send
 ENTITY_PER_SECOND = 100
-BENCHMARK_FEATURES = 100  # Number of features to include per entity
+BENCHMARK_FEATURES = 10  # Number of features to include per entity
 
 BENCHMARK_TOPIC = "benchmark_entity_topic"
 KAFKA_BROKERS = ["broker-1:9092"]

@@ -2,7 +2,7 @@ project: feast_demo_local
 provider: local
 registry:
   registry_type: sql
-  path: postgresql+psycopg://postgres:mysecretpassword@localhost:55001/feast
+  path: postgresql+psycopg://postgres:mysecretpassword@registry:5432/feast
 online_store:
   type: sqlite
   path: data/online_store.db
