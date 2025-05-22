@@ -11,11 +11,16 @@ print(OUTPUT_DIR)
 LATENCY_COLUMN = "preprocess_until_poll"
 
 import seaborn as sns
-def plot_latency_vs_eps_same_duration():
+def plot_latency_vs_eps_by_store(mode="same_duration"):
+    """
+    Plot latency metrics vs EPS for each online store.
+    Modes:
+        - "same_duration": groups by interval + duration + features
+        - "same_rows":     groups by interval + rows + features
+    """
     latest_benchmarks = load_latest_benchmarks(BENCHMARK_ROOT)
     from collections import defaultdict
 
-    # Group by interval + duration + features
     grouped = defaultdict(lambda: defaultdict(dict))  # key → eps → store → stats
 
     for key, run in latest_benchmarks.items():
@@ -24,10 +29,16 @@ def plot_latency_vs_eps_same_duration():
         eps = int(meta["eps"])
         rows = int(meta["rows"])
         features = int(meta["features"])
-        duration = rows // eps
-        group_key = f'{interval}s_{duration}s_{features}f'
-
         store = meta["store"]
+
+        if mode == "same_duration":
+            duration = rows // eps
+            group_key = f"{interval}s_{duration}s_{features}f"
+        elif mode == "same_rows":
+            group_key = f"{interval}s_{rows}rows_{features}f"
+        else:
+            raise ValueError(f"Unsupported mode: {mode}")
+
         merged_csv = os.path.join(run["path"], "merged_log.csv")
         if os.path.exists(merged_csv):
             stats = compute_latency_stats(merged_csv)
@@ -46,18 +57,20 @@ def plot_latency_vs_eps_same_duration():
 
             plt.xlabel("EPS (Entities per Second)")
             plt.ylabel(f"Latency ({metric}) [ms]")
-            plt.title(f"Latency ({metric}) vs EPS (Same Duration) — {group_key}")
+            mode_label = "Same Duration" if mode == "same_duration" else "Same Row Count"
+            plt.title(f"Latency ({metric}) vs EPS — {mode_label} — {group_key}")
             plt.grid(True)
             plt.legend()
             plt.tight_layout()
 
+            suffix = "duration" if mode == "same_duration" else "rows"
             output_file = os.path.join(
                 OUTPUT_DIR,
-                f"latency_vs_eps_duration_{metric}_{group_key}.png"
+                f"latency_metric_{metric}_{suffix}_{group_key}.png"
             )
             os.makedirs(os.path.dirname(output_file), exist_ok=True)
             plt.savefig(output_file)
-            print(f"🕒 Saved same-duration EPS plot: {output_file}")
+            print(f"📊 Saved EPS-{suffix} comparison: {output_file}")
             plt.close()
 
 
