@@ -106,9 +106,6 @@ def merge_and_compute_latencies(spark_csv_path, kafka_csv_path, output_csv="merg
     # Calculate latency metrics (durations)
     # durations are already formatted in seconds
     merged_df["preprocess_until_poll"] = merged_df["retrieval_timestamp"] - merged_df["spark_ingestion_time"]
-    # the kafka consumer receive timestamp is sometimes later than spark ingest
-    # therefore is sometimes negative value, causing parsing error
-    # merged_df["receive_to_ingestor"] = merged_df["spark_ingestion_time"] - merged_df["receive_timestamp"]
     merged_df["produce_to_ingest"] = merged_df["spark_ingestion_time"] - merged_df["produce_timestamp"]
     merged_df["produce_to_receive"] = merged_df["receive_timestamp"] - merged_df["produce_timestamp"]
     merged_df["produce_to_retrieve"] = merged_df["retrieval_timestamp"] - merged_df["produce_timestamp"]
