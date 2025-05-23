@@ -10,32 +10,26 @@ from kafka import KafkaConsumer
 import timing_helper
 from collections import defaultdict
 
-
-
-# ---------- STREAM FEATURE VIEWS ----------
-SFV_10_FEATURES_SUM = "feature_sum:sum"
-SFV_100_FEATURES_SUM = "hundred_features_sum:sum"
-SFV_100_FEATURES_SUM_100 = "hundred_features_all_sum:sum"
 # ---------- BENCHMARK PARAMS ----------
-STREAM_FEATURE_VIEW = SFV_100_FEATURES_SUM_100
-BENCHMARK_ROWS = 100_000
-ENTITY_PER_SECOND = 2500
-PROCESSING_INTERVAL = 1
+STREAM_FEATURE_VIEW = os.getenv("FEATURE_VIEW_NAME")
+BENCHMARK_ROWS = int(os.getenv("ROWS"))
+ENTITY_PER_SECOND = int(os.getenv("ENTITY_PER_SECOND"))
+PROCESSING_INTERVAL = int(os.getenv("PROCESSING_INTERVAL"))
+PROCESSING_START=int(os.getenv("PROCESSING_START",30)) # second of the minute for producer to start sending
+
 GROUP_SIZE = ENTITY_PER_SECOND * PROCESSING_INTERVAL
 
 # official benchmark uses params: https://github.com/feast-dev/feast-benchmarks/blob/main/python/full-report-redis.log
 # Entity rows: 50; Features: 50; Concurrency: 5; RPS: 10
 # Entity rows is our group size
 # features has to switch out feature view
-PROCESSING_START = 30 # second of the minute for producer to start sending
-
 BENCHMARK_TOPIC = "benchmark_entity_topic"
 KAFKA_BROKERS = ["broker-1:9092"]
 
 RUN_ID = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
 GROUP_ID  = f"feast-consumer-{RUN_ID}"
-CSV_PATH = f"/app/logs/kafka_latency_log{RUN_ID}.csv"
-THREAD_STATS_PATH = f"/app/logs/thread_request_stats{RUN_ID}.csv"
+CSV_PATH = f"/app/logs/kafka_latency_log.csv"
+THREAD_STATS_PATH = f"/app/logs/thread_request_stats.csv"
 
 polling_threads = []
 store = FeatureStore()
@@ -52,7 +46,7 @@ def track_request(timestamp):
     request_stats[second] += 1
 
 
-def schedule_polling(entities, receive_times, produce_times, timeout_factor = 5):
+def schedule_polling(entities, receive_times, produce_times, timeout_factor = 20):
     try:
         start_time = time.time()
         timeout = PROCESSING_INTERVAL * timeout_factor
@@ -68,15 +62,15 @@ def schedule_polling(entities, receive_times, produce_times, timeout_factor = 5)
         while not all(retrieved.values()):
             elapsed = time.time() - start_time
             if elapsed > timeout:
-                # not_retrieved = [eid for eid, ok in retrieved.items() if not ok]
-                # print(f"⏱️ Polling timed out after {elapsed:.2f}s. Missing: {not_retrieved}")
+                not_retrieved = [eid for eid, ok in retrieved.items() if not ok]
+                print(f"⏱️ Polling timed out after {elapsed:.2f}s. Missing: {not_retrieved}")
                 break
 
             entity_rows = [{"benchmark_entity": eid} for eid in entities if not retrieved[eid]]
             pre_get_time = time.time()
             track_request(pre_get_time)
             updated = store.get_online_features(
-                features=[STREAM_FEATURE_VIEW],
+                features=[f"{STREAM_FEATURE_VIEW}:sum"],
                 entity_rows=entity_rows
             ).to_dict()
             post_get_time = time.time()
@@ -84,7 +78,7 @@ def schedule_polling(entities, receive_times, produce_times, timeout_factor = 5)
             ids = updated.get("benchmark_entity", [])
             values = updated.get("sum", [])
             if not ids or not values:
-                # print(f"⚠️ Unexpected Feast response: {updated}")
+                print(f"Unexpected Feast response: {updated}")
                 time.sleep(1)
                 continue
             for entity_id, val in zip(ids,values):
@@ -116,7 +110,7 @@ def write_results_from_queue():
         if result == "STOP":
             break
         all_results.append(result)
-        print(f"result from queue: {result}")
+        # print(f"result from queue: {result}")
     all_results.sort(key=lambda r: r["receive_timestamp"])
     # Write all to CSV at once
     with open(CSV_PATH, "a", newline="") as f:
@@ -125,7 +119,7 @@ def write_results_from_queue():
             "entity_id", "produce_timestamp","receive_timestamp", "retrieval_timestamp","get_time","get_batch_size","retry_attempts"
         ],delimiter=";")
         writer.writerows(all_results)
-        print(f"📝 Wrote {len(all_results)} entries to {CSV_PATH}")
+        print(f"Wrote {len(all_results)} entries to {CSV_PATH}")
 
 from datetime import datetime
 def consume_kafka_messages_individual_polling():
@@ -183,7 +177,7 @@ def consume_kafka_messages_individual_polling():
             f.write("entity_id\n")
             for dup in sorted(duplicate_entity_ids):
                 f.write(f"{dup}\n")
-        # print(f"📁 Duplicates written to {duplicates_csv}")
+        # print(f" Duplicates written to {duplicates_csv}")
 
 def poll_single_entity(entity_id, receive_time, produce_time):
     entity_row = [{"benchmark_entity": entity_id}]
@@ -191,7 +185,7 @@ def poll_single_entity(entity_id, receive_time, produce_time):
         pre_get_time = time.time()
         track_request(pre_get_time)
         updated = store.get_online_features(
-            features=[STREAM_FEATURE_VIEW],
+            features=[f"{STREAM_FEATURE_VIEW}:sum"],
             entity_rows=entity_row
         ).to_dict()
         post_get_time = time.time()
@@ -231,8 +225,8 @@ def consume_kafka_messages_grouped():
             last_message_time = time.time()
         except StopIteration:
             # print(f"last message time: {last_message_time}")
-            if time.time() - last_message_time > 5:
-                print("⏱️ No new messages received for over 5 seconds — stopping.")
+            if time.time() - last_message_time > 10:
+                print("⏱️ No new messages received for over 10 seconds — stopping.")
                 break
             continue  # Loop again to check timeout
 
@@ -256,7 +250,7 @@ def consume_kafka_messages_grouped():
                 print(f"⚠️ Duplicate entity_id encountered: {entity_id}")
                 continue
         seen_entity_ids.add(entity_id)
-        print(f"added seen entity_id: {entity_id}")
+        # print(f"added seen entity_id: {entity_id}")
         acquired = group_lock.acquire(timeout=1)
         if not acquired:
             print("⚠️ Could not acquire group_lock — skipping this message.")
@@ -287,7 +281,7 @@ def consume_kafka_messages_grouped():
 
         print(f"len(seen_entity_ids): {len(seen_entity_ids)}")
         if len(seen_entity_ids) >= BENCHMARK_ROWS:
-            print(f"🛑 Reached {BENCHMARK_ROWS} unique entity IDs")
+            print(f"Reached {BENCHMARK_ROWS} unique entity IDs")
             break
 
     if duplicate_entity_ids:
@@ -296,7 +290,7 @@ def consume_kafka_messages_grouped():
             f.write("entity_id\n")
             for dup in sorted(duplicate_entity_ids):
                 f.write(f"{dup}\n")
-        print(f"📁 Duplicates written to {duplicates_csv}")
+        print(f"Duplicates written to {duplicates_csv}")
     else:
         print("✅ No duplicate entity_ids encountered.")
 
@@ -313,7 +307,7 @@ if __name__ == "__main__":
     logger_thread = threading.Thread(target=write_results_from_queue)
     logger_thread.start()
     print(f"starting to wait at {time.time()}")
-    timing_helper.wait_until_second(PROCESSING_START-2)
+    timing_helper.wait_until_second(PROCESSING_START-5)
     try:
         consume_kafka_messages_grouped()
     except KeyboardInterrupt:

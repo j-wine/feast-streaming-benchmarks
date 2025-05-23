@@ -1,0 +1,7 @@
+matplotlib
+numpy
+pandas
+dotenv
+pyarrow
+fastparquet
+seaborn

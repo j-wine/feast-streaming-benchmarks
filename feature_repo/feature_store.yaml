@@ -2,7 +2,6 @@ project: feast_demo_local
 provider: local
 registry:
   registry_type: sql
-  #path: postgresql://postgres:mysecretpassword@registry:5432/feast
   path: postgresql+psycopg://postgres:mysecretpassword@registry:5432/feast
 online_store:
   type: redis

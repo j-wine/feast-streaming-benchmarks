@@ -4,11 +4,11 @@ from datetime import datetime
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-
+from dotenv import load_dotenv
 
 def analyze_thread_stats_vs_latency(thread_csv, latency_csv, is_grouped=True, eps=2500, interval=1,
                                      rows=100_000, input_features=100, output_features=100,
-                                     online_store="redis", operating_system="linux", output_prefix="plots/analysis"):
+                                     online_store="redis", operating_system="linux", output_prefix="local/plots/analysis"):
     # Load thread stats
     df_threads = pd.read_csv(thread_csv, sep=";")
     df_threads.rename(columns={"second": "timestamp_second", "requests": "requests_per_second"}, inplace=True)
@@ -33,6 +33,7 @@ def analyze_thread_stats_vs_latency(thread_csv, latency_csv, is_grouped=True, ep
     # Convert latency to float
     df_merged["preprocess_until_poll"] = df_merged["preprocess_until_poll"].astype(str).str.replace(",", ".").astype(float)
     df_merged["produce_to_retrieve"] = df_merged["produce_to_retrieve"].astype(str).str.replace(",", ".").astype(float)
+    df_merged["preprocess_until_poll"] = df_merged["preprocess_until_poll"] * 1000 #  convert to milliseconds
 
     # Determine mode
     poll_mode = "Grouped Poll" if is_grouped else "Single Poll"
@@ -43,7 +44,7 @@ def analyze_thread_stats_vs_latency(thread_csv, latency_csv, is_grouped=True, ep
     plt.figure(figsize=(10, 6))
     plt.scatter(df_merged["requests_per_second"], df_merged["preprocess_until_poll"], alpha=0.4)
     plt.xlabel("Requests per Second")
-    plt.ylabel("Preprocess → Poll Latency (s)")
+    plt.ylabel("Preprocess → Poll Latency (ms)")
     plt.title(f"Latency vs. Request Volume\n{title_info}")
     plt.grid(True)
     plt.tight_layout()
@@ -56,7 +57,7 @@ def analyze_thread_stats_vs_latency(thread_csv, latency_csv, is_grouped=True, ep
     plt.figure(figsize=(10, 6))
     avg_latency_by_second.plot(marker='o')
     plt.xlabel("Unix Timestamp (second)")
-    plt.ylabel("Average Latency (s)")
+    plt.ylabel("Average Latency (ms)")
     plt.title(f"Avg Latency Over Time\n{title_info}")
     plt.grid(True)
     plt.tight_layout()
@@ -64,15 +65,11 @@ def analyze_thread_stats_vs_latency(thread_csv, latency_csv, is_grouped=True, ep
     plt.savefig(filename2)
     print(f"📈 Saved: {filename2}")
 
-def compute_latency_stats(csv_path, column):
+def compute_latency_stats_tuple(csv_path, column="preprocess_until_poll"):
     df = pd.read_csv(csv_path, sep=";")
-
-    # Clean data: replace comma with dot for float conversion, drop negatives
     df[column] = df[column].astype(str).str.replace(",", ".").astype(float)
     df = df[df[column] >= 0]
-
-    latencies = df[column]
-
+    latencies = df[column] * 1000
     stats = {
         "min": latencies.min(),
         "mean": latencies.mean(),
@@ -85,9 +82,11 @@ def compute_latency_stats(csv_path, column):
     return stats, df
 
 
+
+
 def plot_latency_stats(stats, is_grouped, eps, interval, rows, input_features, output_features, online_store="redis",operating_system="linux",output_file=None):
     labels = list(stats.keys())
-    values = list(stats.values())
+    values = [v * 1000 for v in stats.values()]  # Convert to milliseconds
 
     x = np.arange(len(labels))
 
@@ -95,7 +94,7 @@ def plot_latency_stats(stats, is_grouped, eps, interval, rows, input_features, o
     bars = plt.bar(x, values, width=0.5)
 
     plt.xticks(x, labels)
-    plt.ylabel("Latency (seconds)")
+    plt.ylabel("Latency (milliseconds)")
     poll_mode = "Grouped Poll" if is_grouped else "Single Poll"
     title = f"{poll_mode} — {eps} EPS, {interval}s Interval, {rows} Rows, {input_features} Input Features, {output_features} Output Features"
     plt.title(title)
@@ -111,20 +110,20 @@ def plot_latency_stats(stats, is_grouped, eps, interval, rows, input_features, o
     if output_file is None:
         mode = "grouped" if is_grouped else "single"
         output_file = f"lat_{operating_system}_{online_store}_{mode}_{eps}eps_{interval}s_{rows}rows_{input_features}in_{output_features}out.png"
-    full_path = os.path.join("plots", output_file)
+    full_path = os.path.join("local/plots/", output_file)
     plt.savefig(full_path)
-    plt.show()
 
 
 def plot_latency_over_time(df, is_grouped, eps, interval, rows, input_features, output_features, online_store="redis",operating_system="linux" ,output_file=None):
     df = df[df["preprocess_until_poll"] >= 0].copy()
+    df["preprocess_until_poll"] = df["preprocess_until_poll"] * 1000 # conver to milliseconds
     df["spark_ingestion_time"] = df["spark_ingestion_time"].astype(str).str.replace(",", ".").astype(float)
     df["spark_ingestion_dt"] = df["spark_ingestion_time"].apply(datetime.fromtimestamp)
 
     plt.figure(figsize=(12, 6))
     plt.plot(df["spark_ingestion_dt"], df["preprocess_until_poll"], linestyle='-', marker='.', alpha=0.5)
     plt.xlabel("Spark Ingestion Time")
-    plt.ylabel("Latency (seconds)")
+    plt.ylabel("Latency (milliseconds)")
     poll_mode = "Grouped Poll" if is_grouped else "Single Poll"
     title = f"{poll_mode} — Latency Over Time ({eps} EPS, {interval}s Interval)"
     plt.title(title)
@@ -135,28 +134,30 @@ def plot_latency_over_time(df, is_grouped, eps, interval, rows, input_features, 
         output_file = f"time_{operating_system}_{online_store}_{mode}_{eps}eps_{interval}s_{rows}rows_{input_features}in_{output_features}out.png"
 
     plt.tight_layout()
-    full_path = os.path.join("plots", output_file)
+    full_path = os.path.join("local/plots/", output_file)
     plt.savefig(full_path)
-    plt.show()
+
 
 if __name__ == "__main__":
+    load_dotenv()
+
     # ==== MAIN ====
     operating_system = "linux"
-    csv_path = "merged_log.csv"
+    csv_path = "local/merged_log.csv"
     column = "preprocess_until_poll"
-    eps = 2500
-    interval = 1
-    rows = 100_000
-    input_features = 100
-    output_features = 100
+    eps = int(os.getenv("ENTITY_PER_SECOND"))
+    interval = int(os.getenv("PROCESSING_INTERVAL"))
+    rows = int(os.getenv("ROWS"))
+    input_features = int(os.getenv("FEATURES"))
+    output_features = input_features
     is_grouped = True
-    online_store = "redis"
-    latency_stats, df_filtered = compute_latency_stats(csv_path, column)
+    online_store = os.getenv("ONLINE_STORE")
+    latency_stats, df_filtered = compute_latency_stats_tuple(csv_path, column)
     #
-    # plot_latency_stats(latency_stats, is_grouped, eps, interval, rows, input_features, output_features,online_store,operating_system)
-    # plot_latency_over_time(df_filtered, is_grouped, eps, interval, rows, input_features, output_features,online_store,operating_system)
+    plot_latency_stats(latency_stats, is_grouped, eps, interval, rows, input_features, output_features,online_store,operating_system)
+    plot_latency_over_time(df_filtered, is_grouped, eps, interval, rows, input_features, output_features,online_store,operating_system)
     analyze_thread_stats_vs_latency(
-        thread_csv="../logs/thread_request_stats.csv",
+        thread_csv="logs/thread_request_stats.csv",
         latency_csv=csv_path,
         is_grouped=is_grouped,
         eps=eps,
