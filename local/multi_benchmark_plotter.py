@@ -4,9 +4,11 @@ from datetime import datetime
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from matplotlib.dates import DateFormatter, AutoDateLocator
+from pandas import Timedelta
 
-BENCHMARK_ROOT = os.path.expanduser("~/benchmark_results")
-OUTPUT_DIR = os.path.join(BENCHMARK_ROOT, "comparative_plots")
+BENCHMARK_ROOT = os.path.expanduser("C:\\Users\\jofwf\Desktop\\benchmark_results_bucket\\benchmark-results-glas-eu\\final_run_18_05\\benchmark_results")
+OUTPUT_DIR = os.path.join(BENCHMARK_ROOT, "comparative_plots\\latency_vs_throughput")
 print(OUTPUT_DIR)
 LATENCY_COLUMN = "preprocess_until_poll"
 
@@ -229,8 +231,13 @@ def parse_benchmark_folder_name(name):
     return info
 
 
-def load_latest_benchmarks(root):
+def load_latest_benchmarks(root, store_exclude=None):
+    """
+    Load only the latest benchmark per unique config, with optional exclusion of certain stores.
+    """
     benchmarks_by_key = {}
+    store_exclude = set(store_exclude or [])
+
     for entry in os.listdir(root):
         full_path = os.path.join(root, entry)
         if not os.path.isdir(full_path):
@@ -238,11 +245,15 @@ def load_latest_benchmarks(root):
         meta = parse_benchmark_folder_name(entry)
         if not meta:
             continue
-        key = f'{meta["store"]}_{meta["eps"]}eps_{meta["interval"]}s_{meta["rows"]}rows_{meta["features"]}f'
 
+        if meta["store"] in store_exclude:
+            continue  # ⛔️ skip excluded stores
+
+        key = f'{meta["store"]}_{meta["eps"]}eps_{meta["interval"]}s_{meta["rows"]}rows_{meta["features"]}f'
         existing = benchmarks_by_key.get(key)
         if not existing or meta["timestamp"] > existing["meta"]["timestamp"]:
             benchmarks_by_key[key] = {"meta": meta, "path": full_path}
+
     return benchmarks_by_key
 
 
@@ -453,11 +464,13 @@ def plot_throughput_vs_latency_all(benchmarks, output_dir="throughput_vs_latency
 
 
 if __name__ == "__main__":
-    run_comparative_plotting()
+    # run_comparative_plotting()
     benchmarks = load_latest_benchmarks(BENCHMARK_ROOT)
-    plot_latency_distribution_per_benchmark(benchmarks)
-    plot_violin_latency_by_store(benchmarks)
-    plot_latency_vs_eps_by_store(mode="same_duration")
-    plot_latency_vs_eps_by_store(mode="same_rows")
-    for metric in ["min", "mean", "p50", "p90", "p95", "p99"]:
-        plot_latency_vs_features(benchmarks, metric)
+    plot_latency_vs_features_combined(benchmarks, metric="mean")
+    plot_throughput_vs_latency_all(benchmarks)
+    # plot_latency_distribution_per_benchmark(benchmarks)
+    # plot_violin_latency_by_store(benchmarks)
+    # plot_latency_vs_eps_by_store(mode="same_duration")
+    # plot_latency_vs_eps_by_store(mode="same_rows")
+    # for metric in ["min", "mean", "p50", "p90", "p95", "p99", "max"]:
+    #     plot_latency_vs_features(benchmarks, metric)
