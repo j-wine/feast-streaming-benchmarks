@@ -188,7 +188,7 @@ def plot_latency_distribution_per_benchmark(benchmarks):
             plt.axvline(val, linestyle="--", label=f"{label}: {val:.1f} ms")
 
         plt.xlabel("Latency (ms)")
-        plt.ylabel("Frequency")
+        plt.ylabel("Frequency (Vorkommen)")
         meta = run["meta"]
         title = f"{meta['store']} — {meta['eps']} EPS, {meta['features']}F, {meta['rows']} rows"
         plt.title(title)
