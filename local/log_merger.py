@@ -23,7 +23,6 @@ def parse_spark_ingestor_log(input_filename="logs/spark_log", output_filename="l
         entity_ids_str = match.group(2)
 
         if not entity_ids_str.strip():
-            # Empty list: []
             continue
 
         try:

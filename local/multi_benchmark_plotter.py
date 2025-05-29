@@ -333,6 +333,124 @@ def run_comparative_plotting():
             csv_path = os.path.join(OUTPUT_DIR, f"latency_eps_{name}.csv")
             export_stats_to_csv(stats, csv_path)
 
+def plot_latency_vs_features_combined(benchmarks, metric="mean"):
+    feature_dir = os.path.join(OUTPUT_DIR, "latency_vs_features_combined")
+    os.makedirs(feature_dir, exist_ok=True)
+
+    # Group by identical eps + interval + rows (excluding store + features)
+    from collections import defaultdict
+    config_groups = defaultdict(lambda: defaultdict(list))  # config_key → store → runs
+
+    for key, run in benchmarks.items():
+        m = run["meta"]
+        config_key = f'{m["eps"]}eps_{m["interval"]}s_{m["rows"]}rows'
+        store = m["store"]
+        config_groups[config_key][store].append(run)
+
+    for config_key, store_runs in config_groups.items():
+        # Only include stores with sufficient data points
+        valid_stores = {store: runs for store, runs in store_runs.items() if len(runs) >= 3}
+        if len(valid_stores) < 2:
+            continue  # skip if too few stores
+
+        plt.figure(figsize=(10, 6))
+        for store, runs in valid_stores.items():
+            features = []
+            values = []
+            for run in sorted(runs, key=lambda r: int(r["meta"]["features"])):
+                csv_path = os.path.join(run["path"], "merged_log.csv")
+                if not os.path.exists(csv_path):
+                    continue
+                stats = compute_latency_stats(csv_path)
+                feature_count = int(run["meta"]["features"])
+                value = stats.get(metric)
+                if value is not None:
+                    features.append(feature_count)
+                    values.append(value)
+
+            if features and values:
+                plt.plot(features, values, marker="o", label=store)
+
+        plt.xlabel("Number of Features")
+        plt.ylabel(f"Latency ({metric}) [ms]")
+        plt.title(f"{metric.capitalize()} Latency vs Features — {config_key}")
+        plt.grid(True)
+        plt.legend()
+        plt.tight_layout()
+
+        filename = f"latency_vs_features_combined_{metric}_{config_key}.png"
+        plt.savefig(os.path.join(feature_dir, filename))
+        plt.close()
+        print(f"📈 Combined plot saved: {filename}")
+
+from matplotlib.dates import DateFormatter, AutoDateLocator
+
+from matplotlib.dates import AutoDateLocator, DateFormatter
+from matplotlib.ticker import MaxNLocator
+
+def plot_throughput_vs_latency_all(benchmarks, output_dir="throughput_vs_latency"):
+    os.makedirs(os.path.join(OUTPUT_DIR, output_dir), exist_ok=True)
+
+    for key, run in benchmarks.items():
+        merged_csv_path = os.path.join(run["path"], "merged_log.csv")
+        if not os.path.exists(merged_csv_path):
+            continue
+
+        try:
+            df = pd.read_csv(merged_csv_path, sep=";")
+            if "preprocess_until_poll" not in df or "retrieval_timestamp" not in df:
+                continue
+
+            df["retrieval_timestamp"] = df["retrieval_timestamp"].astype(str).str.replace(",", ".").astype(float)
+            df["preprocess_until_poll"] = df["preprocess_until_poll"].astype(str).str.replace(",", ".").astype(float)
+            df = df[df["preprocess_until_poll"] >= 0]
+
+            df["retrieval_dt"] = pd.to_datetime(df["retrieval_timestamp"], unit="s")
+            df["timestamp_sec"] = df["retrieval_dt"].dt.floor("S")
+
+            grouped = df.groupby("timestamp_sec").agg(
+                avg_latency=("preprocess_until_poll", lambda x: x.mean() * 1000),
+                throughput=("entity_id", "count")
+            ).reset_index()
+
+            if grouped.empty:
+                continue
+
+            fig, ax1 = plt.subplots(figsize=(12, 6))
+
+            # Primary Y-axis (latency)
+            ax1.plot(grouped["timestamp_sec"], grouped["avg_latency"], color="blue", label="Ø Latency (ms)")
+            ax1.set_ylabel("Average Latency (ms)", color="blue")
+            ax1.tick_params(axis="y", labelcolor="blue")
+            ax1.grid(True)
+
+            # X-axis formatting
+            ax1.set_xlabel("Time (HH:MM:SS)")
+            ax1.set_xlim(grouped["timestamp_sec"].min(), grouped["timestamp_sec"].max())
+            ax1.xaxis.set_major_locator(MaxNLocator(nbins=10))  # ~10 ticks max
+            ax1.xaxis.set_major_formatter(DateFormatter("%H:%M:%S"))
+            fig.autofmt_xdate()
+
+            # Secondary Y-axis (throughput)
+            ax2 = ax1.twinx()
+            bar_width = Timedelta(seconds=1)  # width matches one second
+            ax2.bar(grouped["timestamp_sec"], grouped["throughput"], width=bar_width, align="center", color="gray",
+                    alpha=0.3)
+            ax2.set_ylabel("Throughput (entities/sec)", color="gray")
+            ax2.tick_params(axis="y", labelcolor="gray")
+
+            # Title and save
+            plt.title(f"Throughput vs Avg Latency — {run['meta']['store']} — {run['meta']['eps']}eps, {run['meta']['features']}F")
+            fig.tight_layout()
+
+            filename = f"throughput_vs_latency_{run['meta']['store']}_{run['meta']['eps']}eps_{run['meta']['features']}f.png"
+            plt.savefig(os.path.join(OUTPUT_DIR, output_dir, filename))
+            plt.close()
+            print(f"📈 Saved throughput-latency plot: {filename}")
+
+        except Exception as e:
+            print(f"⚠️ Error while processing {merged_csv_path}: {e}")
+
 
 if __name__ == "__main__":
     run_comparative_plotting()
