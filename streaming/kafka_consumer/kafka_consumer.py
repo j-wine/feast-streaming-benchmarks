@@ -172,7 +172,7 @@ def consume_kafka_messages_individual_polling():
 
 
     if duplicate_entity_ids:
-        duplicates_csv = f"/app/logs/duplicates_{RUN_ID}.csv"
+        duplicates_csv = f"/app/logs/duplicates.csv"
         with open(duplicates_csv, "w") as f:
             f.write("entity_id\n")
             for dup in sorted(duplicate_entity_ids):
