@@ -33,6 +33,8 @@ THREAD_STATS_PATH = f"/app/logs/thread_request_stats.csv"
 
 polling_threads = []
 store = FeatureStore()
+# trigger the caching of registry by making dummmy get request
+store.get_online_features(features=["stream_view_10in_10out:sum"],entity_rows=[{"benchmark_entity": 1337}])
 current_group = []
 group_times = []
 group_lock = threading.Lock()

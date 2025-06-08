@@ -3,6 +3,7 @@ provider: local
 registry:
   registry_type: sql
   path: postgresql+psycopg://postgres:mysecretpassword@registry:5432/feast
+  cache_ttl_seconds: 0 # registry never gets recachec
 online_store:
   type: mysql
   host: mysql
