@@ -462,12 +462,133 @@ def plot_throughput_vs_latency_all(benchmarks, output_dir="throughput_vs_latency
         except Exception as e:
             print(f"⚠️ Error while processing {merged_csv_path}: {e}")
 
+def plot_thread_stats_over_time(benchmarks, output_dir="thread_stats_over_time"):
+    import matplotlib.dates as mdates
+    os.makedirs(os.path.join(OUTPUT_DIR, output_dir), exist_ok=True)
+
+    for key, run in benchmarks.items():
+        thread_csv = os.path.join(run["path"], "thread_request_stats.csv")
+        if not os.path.exists(thread_csv):
+            continue
+
+        try:
+            df = pd.read_csv(thread_csv, sep=";")
+            if "timestamp" not in df or "thread_id" not in df:
+                print(f"⚠️ Skipping invalid thread stats: {thread_csv}")
+                continue
+
+            # Konvertiere Zeitstempel
+            df["timestamp"] = df["timestamp"].astype(str).str.replace(",", ".").astype(float)
+            df["dt"] = pd.to_datetime(df["timestamp"], unit="s")
+            df["second"] = df["dt"].dt.floor("S")
+
+            # Gruppiere pro Sekunde: z. B. wie viele Threads aktiv (unique), wie viele Requests
+            grouped = df.groupby("second").agg(
+                active_threads=("thread_id", "nunique"),
+                total_requests=("thread_id", "count")
+            ).reset_index()
+
+            fig, ax1 = plt.subplots(figsize=(12, 6))
+
+            ax1.plot(grouped["second"], grouped["active_threads"], color="tab:green", label="Active Threads")
+            ax1.set_ylabel("Active Threads", color="tab:green")
+            ax1.tick_params(axis="y", labelcolor="tab:green")
+            ax1.set_xlabel("Time (HH:MM:SS)")
+            ax1.xaxis.set_major_formatter(mdates.DateFormatter("%H:%M:%S"))
+            ax1.xaxis.set_major_locator(mdates.AutoDateLocator())
+            fig.autofmt_xdate()
+            ax1.grid(True)
+
+            ax2 = ax1.twinx()
+            ax2.bar(grouped["second"], grouped["total_requests"], width=0.8, color="gray", alpha=0.3, label="Total Requests")
+            ax2.set_ylabel("Total Requests", color="gray")
+            ax2.tick_params(axis="y", labelcolor="gray")
+
+            plt.title(f"Thread Stats Over Time — {run['meta']['store']} — {run['meta']['eps']}eps, {run['meta']['features']}F")
+            fig.tight_layout()
+
+            filename = f"thread_stats_{run['meta']['store']}_{run['meta']['eps']}eps_{run['meta']['features']}f.png"
+            plt.savefig(os.path.join(OUTPUT_DIR, output_dir, filename))
+            plt.close()
+            print(f"🧵 Saved thread activity plot: {filename}")
+
+        except Exception as e:
+            print(f"⚠️ Error processing {thread_csv}: {e}")
+def plot_latency_and_thread_stats(benchmarks, output_dir="combined_latency_thread_stats"):
+    import os
+    from matplotlib.ticker import MaxNLocator
+    from matplotlib.dates import DateFormatter
+    from pandas import Timedelta
+
+    output_path = os.path.join(OUTPUT_DIR, output_dir)
+    os.makedirs(output_path, exist_ok=True)
+
+    for key, run in benchmarks.items():
+        merged_csv = os.path.join(run["path"], "merged_log.csv")
+        thread_csv = os.path.join(run["path"], "thread_request_stats.csv")
+
+        if not os.path.exists(merged_csv) or not os.path.exists(thread_csv):
+            continue
+
+        try:
+            # Latenz laden
+            df = pd.read_csv(merged_csv, sep=";")
+            df["retrieval_timestamp"] = df["retrieval_timestamp"].astype(str).str.replace(",", ".").astype(float)
+            df["preprocess_until_poll"] = df["preprocess_until_poll"].astype(str).str.replace(",", ".").astype(float)
+            df = df[df["preprocess_until_poll"] >= 0]
+            df["timestamp_sec"] = pd.to_datetime(df["retrieval_timestamp"], unit="s").dt.floor("S")
+            latency_grouped = df.groupby("timestamp_sec").agg(
+                avg_latency=("preprocess_until_poll", lambda x: x.mean() * 1000)
+            ).reset_index()
+
+            # Threads laden
+            ts_df = pd.read_csv(thread_csv, sep=";")
+            ts_df["timestamp_sec"] = pd.to_datetime(ts_df["second"], unit="s")
+            ts_df = ts_df.rename(columns={"requests": "thread_requests"})
+
+            # Mergen auf gemeinsame Sekunde
+            merged = pd.merge(latency_grouped, ts_df, on="timestamp_sec", how="outer").sort_values("timestamp_sec")
+            merged.fillna(0, inplace=True)
+
+            # Plot
+            fig, ax1 = plt.subplots(figsize=(12, 6))
+            ax1.plot(merged["timestamp_sec"], merged["avg_latency"], color="blue", label="Ø Latency (ms)")
+            ax1.set_ylabel("Latency (ms)", color="blue")
+            ax1.tick_params(axis="y", labelcolor="blue")
+            ax1.grid(True)
+
+            ax1.set_xlabel("Time (HH:MM:SS)")
+            ax1.set_xlim(merged["timestamp_sec"].min(), merged["timestamp_sec"].max())
+            ax1.xaxis.set_major_locator(MaxNLocator(nbins=10))
+            ax1.xaxis.set_major_formatter(DateFormatter("%H:%M:%S"))
+            fig.autofmt_xdate()
+
+            ax2 = ax1.twinx()
+            bar_width = Timedelta(seconds=1)
+            ax2.bar(merged["timestamp_sec"], merged["thread_requests"], width=bar_width, color="gray", alpha=0.3)
+            ax2.set_ylabel("Thread Requests/sec", color="gray")
+            ax2.tick_params(axis="y", labelcolor="gray")
+
+            plt.title(f"Latency vs Thread Requests — {run['meta']['store']} — {run['meta']['eps']} EPS")
+            fig.tight_layout()
+
+            filename = f"combined_latency_thread_{run['meta']['store']}_{run['meta']['eps']}eps.png"
+            plt.savefig(os.path.join(output_path, filename))
+            plt.close()
+            print(f"📈 Saved combined latency-thread plot: {filename}")
+
+        except Exception as e:
+            print(f"⚠️ Error with {run['path']}: {e}")
 
 if __name__ == "__main__":
     # run_comparative_plotting()
     benchmarks = load_latest_benchmarks(BENCHMARK_ROOT)
+    plot_latency_and_thread_stats(benchmarks)
+    plot_thread_stats_over_time(benchmarks)
+    benchmarks = load_latest_benchmarks(BENCHMARK_ROOT,store_exclude="bigtable postgres")
     plot_latency_vs_features_combined(benchmarks, metric="mean")
-    plot_throughput_vs_latency_all(benchmarks)
+
+    # plot_throughput_vs_latency_all(benchmarks)
     # plot_latency_distribution_per_benchmark(benchmarks)
     # plot_violin_latency_by_store(benchmarks)
     # plot_latency_vs_eps_by_store(mode="same_duration")
