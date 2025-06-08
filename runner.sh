@@ -14,53 +14,33 @@ BRANCHES=(
   automated-dragonfly
   automated-redis
 )
-# short durations
-#BENCHMARK_CONFIGS=(
-#  "100 1 600 10"
-#  "100 1 1200 10"
-#  "100 1 1800 10"
-#  "100 1 600 100"
-#  "100 1 1200 100"
-#  "100 1 1800 100"
-#  "100 1 600 250"
-#  "100 1 1200 250"
-#  "100 1 1800 250"
-#  "500 1 3000 10"
-#  "500 1 3000 100"
-#  "500 1 3000 250"
-#  "1000 1 6000 10"
-#  "1000 1 6000 100"
-#  "1000 1 6000 250"
-#  "2500 1 15000 10"
-#  "2500 1 15000 100"
-#  "2500 1 15000 250"
-#)
-
-
 
 BENCHMARK_CONFIGS=(
-# eps interval rows features
-  "100 1 10000 10"
-  "100 1 10000 50"
-  "100 1 10000 100"
-  "100 1 10000 250"
 
-  "500 1 50000 10"
-  "500 1 50000 50"
-  "500 1 50000 100"
-  "500 1 50000 250"
+# Leichte Last
+"100 1 30000 10"
+"100 1 30000 50"
 
-  "1000 1 100000 10"
-  "1000 1 100000 50"
-  "1000 1 100000 100"
-  "1000 1 100000 250"
+# Mittlere Last
+"500 1 150000 50"
+"500 1 150000 100"
+"500 1 150000 250"
 
-  "2500 1 250000 10"
-  "2500 1 250000 50"
-  "2500 1 250000 100"
-  "2500 1 250000 250"
+# Hohe Last
+"1000 1 300000 50"
+"1000 1 300000 100"
+"1000 1 300000 250"
+
+# Extreme Last
+"2000 1 600000 50"
+"2000 1 600000 100"
+"2000 1 600000 250"
+
+# Ultra-Last
+"3000 1 900000 50"
+"3000 1 900000 100"
+"3000 1 900000 250"
 )
-
 wait_until_second() {
   target_second=$(( (60 + PROCESSING_START - 30) % 60 ))
   current_second=$(date +%S)
@@ -101,6 +81,8 @@ for BRANCH in "${BRANCHES[@]}"; do
   fi
 
   for config in "${BENCHMARK_CONFIGS[@]}"; do
+      for run in {1..3}; do
+        echo "=== RUN $run/3: $ONLINE_STORE — EPS=$EPS, INT=$INTERVAL, ROWS=$ROWS, FEAT=$FEATURES ==="
     read EPS INTERVAL ROWS FEATURES <<< "$config"
 
     cat > .env <<EOF
@@ -170,6 +152,7 @@ EOF
     docker compose down --volumes
     echo "✅ Finished run: $results_dir"
     echo "------------------------------------------------------------"
+    done
   done
 
   echo "✅ All runs completed for branch: $BRANCH"
