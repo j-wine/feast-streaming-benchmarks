@@ -1,3 +1,4 @@
+import os
 from datetime import datetime
 from datetime import timedelta
 
@@ -83,49 +84,80 @@ def format_duration(ts):
 
 
 def merge_and_compute_latencies(spark_csv_path, kafka_csv_path, output_csv="merged_with_latency.csv"):
+    if not os.path.exists(spark_csv_path):
+        print(f"❌ File not found: {spark_csv_path}")
+        return
+    if not os.path.exists(kafka_csv_path):
+        print(f"❌ File not found: {kafka_csv_path}")
+        return
+
+    try:
+        spark_df = pd.read_csv(spark_csv_path)
+        if spark_df.empty:
+            print(f"⚠️ Empty Spark DataFrame from: {spark_csv_path}")
+            return
+    except Exception as e:
+        print(f"❌ Failed to read Spark CSV: {e}")
+        return
+
+
     # Load CSVs
     spark_df = pd.read_csv(spark_csv_path)
-    kafka_df = pd.read_csv(kafka_csv_path, sep=";")
+    try:
+        kafka_df = pd.read_csv(kafka_csv_path, sep=";")
+        if kafka_df.empty:
+            print(f"⚠️ Empty Kafka DataFrame from: {kafka_csv_path}")
+            return
+    except Exception as e:
+        print(f"❌ Failed to read Kafka CSV: {e}")
+        return
 
-    # Ensure consistent types
-    spark_df["entity_id"] = spark_df["entity_id"].astype(int)
-    kafka_df["entity_id"] = kafka_df["entity_id"].astype(int)
+    try:
+        spark_df["entity_id"] = spark_df["entity_id"].astype(int)
+        kafka_df["entity_id"] = kafka_df["entity_id"].astype(int)
 
-    # Merge on entity_id (inner join to skip mismatches)
-    merged_df = pd.merge(spark_df, kafka_df, on="entity_id", how="inner")
-    # add human hour:minute:second form of timestamps
-    for col in [
-        "spark_ingestion_time",
-        "receive_timestamp",
-        "retrieval_timestamp",
-        "produce_timestamp"
-    ]:
-        merged_df[col + "_hms"] = merged_df[col].apply(format_timestamp_hms_milliseconds)
+        merged_df = pd.merge(spark_df, kafka_df, on="entity_id", how="inner")
+        if merged_df.empty:
+            print("⚠️ No matching rows found after merge.")
+            return
 
-    # Calculate latency metrics (durations)
-    # durations are already formatted in seconds
-    merged_df["preprocess_until_poll"] = merged_df["retrieval_timestamp"] - merged_df["spark_ingestion_time"]
-    merged_df["produce_to_ingest"] = merged_df["spark_ingestion_time"] - merged_df["produce_timestamp"]
-    merged_df["produce_to_receive"] = merged_df["receive_timestamp"] - merged_df["produce_timestamp"]
-    merged_df["produce_to_retrieve"] = merged_df["retrieval_timestamp"] - merged_df["produce_timestamp"]
+        for col in ["spark_ingestion_time", "receive_timestamp", "retrieval_timestamp", "produce_timestamp"]:
+            merged_df[col + "_hms"] = merged_df[col].apply(format_timestamp_hms_milliseconds)
 
 
-    # Reorder columns
-    ordered_columns = (
-        ["entity_id"] +
-        ["preprocess_until_poll", "produce_to_ingest", "produce_to_receive", "produce_to_retrieve", ] +
-        ["produce_timestamp_hms", "receive_timestamp_hms", "spark_ingestion_time_hms", "retrieval_timestamp_hms"] +
-        ["produce_timestamp", "receive_timestamp", "spark_ingestion_time", "retrieval_timestamp"]
-    )
-    merged_df = merged_df[ordered_columns]
+        # If spark_ingestion_time < retrieval_timestamp (the normal case), then we take it.
+        # If spark_ingestion_time > retrieval_timestamp (error case with batch congestion), then we know:
+        # retrieval_timestamp - produce_timestamp is always correct (worst case total latency)
+        merged_df["preprocess_until_poll"] = merged_df.apply(
+            lambda row: row["retrieval_timestamp"] - row["spark_ingestion_time"]
+            if row["retrieval_timestamp"] >= row["spark_ingestion_time"]
+            else row["retrieval_timestamp"] - row["receive_timestamp"],  # fallback: total latency between message receival in the consumer and sucessfull read
+            axis=1
+        )
+        merged_df["latency_fallback_used"] = merged_df.apply(
+            lambda row: row["retrieval_timestamp"] < row["spark_ingestion_time"],
+            axis=1
+        )
+        merged_df["produce_to_ingest"] = merged_df["spark_ingestion_time"] - merged_df["produce_timestamp"]
+        merged_df["produce_to_receive"] = merged_df["receive_timestamp"] - merged_df["produce_timestamp"]
+        merged_df["produce_to_retrieve"] = merged_df["retrieval_timestamp"] - merged_df["produce_timestamp"]
 
-    # Convert all float values from dot to comma format for Excel compatibility
-    for col in merged_df.columns:
-        if merged_df[col].dtype == float:
-            merged_df[col] = merged_df[col].map(lambda x: f"{x:.6f}".replace('.', ','))
+        ordered_columns = (
+            ["entity_id"] +
+            ["preprocess_until_poll", "produce_to_ingest", "produce_to_receive", "produce_to_retrieve"] +
+            ["produce_timestamp_hms", "receive_timestamp_hms", "spark_ingestion_time_hms", "retrieval_timestamp_hms"] +
+            ["produce_timestamp", "receive_timestamp", "spark_ingestion_time", "retrieval_timestamp"]
+        )
+        merged_df = merged_df[ordered_columns]
 
-    # Save to CSV with semicolon delimiter
-    merged_df.to_csv(output_csv, sep=';', index=False)
+        for col in merged_df.columns:
+            if merged_df[col].dtype == float:
+                merged_df[col] = merged_df[col].map(lambda x: f"{x:.6f}".replace('.', ','))
+
+        merged_df.to_csv(output_csv, sep=';', index=False)
+        print(f"✅ Merged data written to {output_csv}")
+    except Exception as e:
+        print(f"❌ Failed during merge or processing: {e}")
 
 if __name__ == "__main__":
     consumer_csv_path = "logs/kafka_latency_log.csv"
