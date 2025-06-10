@@ -17,30 +17,36 @@ BRANCHES=(
 
 BENCHMARK_CONFIGS=(
 
-# Leichte Last
-"100 1 30000 10"
-"100 1 30000 50"
+  # Leichte Last (100 EPS)
+  100 100 30000 10      # Best-Case: geringe Feature-Anzahl, minimalste Latenz
+  100 100 30000 250     # Feature-Komplexitätsgrenze
+  100 500 30000 250     # Feature-Grenze + hoher processing_time
 
-# Mittlere Last
-"500 1 150000 50"
-"500 1 150000 100"
-"500 1 150000 250"
+  # Mittlere Last (500 EPS)
+  500 250 150000 50     # moderate Feature-Anzahl, realistische Last
+  500 500 150000 250    # maximale Feature-Anzahl in mittlerem Setting
 
-# Hohe Last
-"1000 1 300000 50"
-"1000 1 300000 100"
-"1000 1 300000 250"
+  # ️ Hohe Last (1000 EPS)
+  1000 300 300000 50    # etwas kürzeres Intervall, mittlere Komplexität
+  1000 700 300000 100   # realistische Feature-Komplexität, angepasste Zeit
+  1000 1000 300000 250  # Feature- und Last-Grenzbereich
 
-# Extreme Last
-"2000 1 600000 50"
-"2000 1 600000 100"
-"2000 1 600000 250"
+  # Zwischenstufe (1500 EPS) → neu
+  1500 1000 450000 100  # neue Stufe für Übergang Hoch → Extrem
 
-# Ultra-Last
-"3000 1 900000 50"
-"3000 1 900000 100"
-"3000 1 900000 250"
+  # Extreme Last (2000 EPS)
+  2000 1000 600000 50   # harte Last, einfache Features
+  2000 1500 600000 100  # mittlere Features, langer Intervall
+  2000 2000 600000 250  # maximal belastet
+
+  # Referenzpunkt für Vergleichbarkeit
+  1000 500 300000 50    # bereits bekannter Lauf, Vergleich zu Altläufen
+
+  # Stresstest (kurzes Intervall, hohe Last)
+  1000 200 300000 50    # Tests Mini-Batch-Stau/Feast-Bottlenecks gezielt
+
 )
+
 wait_until_second() {
   target_second=$(( (60 + PROCESSING_START - 30) % 60 ))
   current_second=$(date +%S)
@@ -81,8 +87,6 @@ for BRANCH in "${BRANCHES[@]}"; do
   fi
 
   for config in "${BENCHMARK_CONFIGS[@]}"; do
-      for run in {1..3}; do
-        echo "=== RUN $run/3: $ONLINE_STORE — EPS=$EPS, INT=$INTERVAL, ROWS=$ROWS, FEAT=$FEATURES ==="
     read EPS INTERVAL ROWS FEATURES <<< "$config"
 
     cat > .env <<EOF
@@ -137,22 +141,21 @@ EOF
     docker wait kafka_consumer
 
     docker logs spark_ingestor >> logs/spark_log
-    mkdir -p local/plots
-    python local/log_merger.py
-    python local/plotting.py
+#    mkdir -p local/plots
+#    python local/log_merger.py
+#    python local/plotting.py
 
     timestamp=$(date +%Y%m%d_%H%M%S)
     results_dir="$RESULTS_ROOT/${ONLINE_STORE}_${EPS}eps_${INTERVAL}s_${ROWS}rows_${FEATURES}f_$timestamp"
     mkdir -p "$results_dir"
     cp logs/* "$results_dir/" || true
-    cp local/merged_log.csv "$results_dir/" || true
-    cp plots/* "$results_dir/" 2>/dev/null || true
+#    cp local/merged_log.csv "$results_dir/" || true
+#    cp plots/* "$results_dir/" 2>/dev/null || true
 
     rm -f logs/*
     docker compose down --volumes
     echo "✅ Finished run: $results_dir"
     echo "------------------------------------------------------------"
-    done
   done
 
   echo "✅ All runs completed for branch: $BRANCH"
