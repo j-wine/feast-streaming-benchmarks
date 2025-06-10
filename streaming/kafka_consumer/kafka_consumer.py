@@ -14,10 +14,10 @@ from collections import defaultdict
 STREAM_FEATURE_VIEW = os.getenv("FEATURE_VIEW_NAME")
 BENCHMARK_ROWS = int(os.getenv("ROWS"))
 ENTITY_PER_SECOND = int(os.getenv("ENTITY_PER_SECOND"))
-PROCESSING_INTERVAL = int(os.getenv("PROCESSING_INTERVAL"))
+PROCESSING_INTERVAL = int(os.getenv("PROCESSING_INTERVAL")) # millliseconds
 PROCESSING_START=int(os.getenv("PROCESSING_START",30)) # second of the minute for producer to start sending
 
-GROUP_SIZE = ENTITY_PER_SECOND * PROCESSING_INTERVAL
+GROUP_SIZE =int(( ENTITY_PER_SECOND * PROCESSING_INTERVAL)/1000) # convert ms to second
 
 # official benchmark uses params: https://github.com/feast-dev/feast-benchmarks/blob/main/python/full-report-redis.log
 # Entity rows: 50; Features: 50; Concurrency: 5; RPS: 10

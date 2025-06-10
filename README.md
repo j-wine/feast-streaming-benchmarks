@@ -31,7 +31,7 @@ Benchmark behavior can be adjusted via environment variables or scripts:
 | `ROWS`               | Total number of rows to process              |
 | `FEATURES_IN`        | Number of input features per entity          |
 | `FEATURES_OUT`       | Number of output features per entity         |
-| `PROCESSING_INTERVAL`| Spark micro-batch interval (in seconds)      |
+| `PROCESSING_INTERVAL`| Spark micro-batch interval (in milliseconds) |
 | `SFV_NAME`           | Name of the StreamFeatureView to use         |
 
 Feature View selection is automatically derived from the `(FEATURES_IN, FEATURES_OUT)` combination.
