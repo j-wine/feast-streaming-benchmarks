@@ -8,8 +8,9 @@ from pandas import Timedelta
 
 from plotting import compute_latency_stats_tuple, plot_latency_stats, plot_latency_over_time, \
     analyze_thread_stats_vs_latency
+BENCHMARK_ROOT= "C:\\Users\\jofwf\\Desktop\\benchmark-results-glas-eu\\10_06\\10_06\\10_06"
 
-BENCHMARK_ROOT = os.path.expanduser("C:\\Users\\jofwf\Desktop\\benchmark_results_bucket\\benchmark-results-glas-eu\\final_run_18_05\\benchmark_results")
+# BENCHMARK_ROOT = os.path.expanduser("C:\\Users\\jofwf\Desktop\\benchmark_results_bucket\\benchmark-results-glas-eu\\final_run_18_05\\benchmark_results")
 OUTPUT_DIR = os.path.join(BENCHMARK_ROOT, "comparative_plots\\latency_vs_throughput")
 print(OUTPUT_DIR)
 LATENCY_COLUMN = "preprocess_until_poll"
@@ -596,56 +597,57 @@ def load_all_benchmarks(root):
 if __name__ == "__main__":
     # run_comparative_plotting()
     benchmarks = load_latest_benchmarks(BENCHMARK_ROOT)
-    plot_latency_and_thread_stats(benchmarks)
-    plot_thread_stats_over_time(benchmarks)
-    benchmarks = load_latest_benchmarks(BENCHMARK_ROOT,store_exclude="bigtable postgres")
-    plot_latency_vs_features_combined(benchmarks, metric="mean")
-    # Load ALL matching benchmark folders
-    all_benchmarks = load_all_benchmarks(BENCHMARK_ROOT)
+    plot_latency_vs_eps_by_store()
+    # plot_latency_and_thread_stats(benchmarks)
+    # plot_thread_stats_over_time(benchmarks)
+    # benchmarks = load_latest_benchmarks(BENCHMARK_ROOT,store_exclude="bigtable postgres")
+    # plot_latency_vs_features_combined(benchmarks, metric="mean")
+    # # Load ALL matching benchmark folders
+    # all_benchmarks = load_all_benchmarks(BENCHMARK_ROOT)
 
     # Run single plots for each folder
-    for run in all_benchmarks:
-        run_path = run["path"]
-        merged_csv = os.path.join(run_path, "merged_log.csv")
-        thread_csv = os.path.join(run_path, "thread_request_stats.csv")
-
-        if not os.path.exists(merged_csv) or not os.path.exists(thread_csv):
-            print(f"⚠️ Skipping {run_path} — required CSV not found.")
-            continue
-
-        # Read metadata
-        meta = run["meta"]
-        eps = int(meta["eps"])
-        interval = int(meta["interval"])
-        rows = int(meta["rows"])
-        input_features = int(meta["features"])
-        output_features = input_features
-        is_grouped = True  # or infer from folder name if needed
-        online_store = meta["store"]
-        operating_system = "linux"
-
-        # Compute latency stats + filtered df
-        latency_stats, df_filtered = compute_latency_stats_tuple(merged_csv, LATENCY_COLUMN)
-
-        # Save plots in the run folder
-        plot_latency_stats(
-            latency_stats, is_grouped, eps, interval, rows, input_features, output_features,
-            online_store, operating_system,
-            output_file=os.path.join(run_path, "lat_stats.png")
-        )
-        plot_latency_over_time(
-            df_filtered, is_grouped, eps, interval, rows, input_features, output_features,
-            online_store, operating_system,
-            output_file=os.path.join(run_path, "lat_over_time.png")
-        )
-        analyze_thread_stats_vs_latency(
-            thread_csv, merged_csv,
-            is_grouped, eps, interval, rows, input_features, output_features,
-            online_store, operating_system,
-            output_prefix=os.path.join(run_path, "lat_vs_rps")
-        )
-
-        print(f"✅ Single plots saved in: {run_path}")
+    # for run in all_benchmarks:
+    #     run_path = run["path"]
+    #     merged_csv = os.path.join(run_path, "merged_log.csv")
+    #     thread_csv = os.path.join(run_path, "thread_request_stats.csv")
+    #
+    #     if not os.path.exists(merged_csv) or not os.path.exists(thread_csv):
+    #         print(f"⚠️ Skipping {run_path} — required CSV not found.")
+    #         continue
+    #
+    #     # Read metadata
+    #     meta = run["meta"]
+    #     eps = int(meta["eps"])
+    #     interval = int(meta["interval"])
+    #     rows = int(meta["rows"])
+    #     input_features = int(meta["features"])
+    #     output_features = input_features
+    #     is_grouped = True  # or infer from folder name if needed
+    #     online_store = meta["store"]
+    #     operating_system = "linux"
+    #
+    #     # Compute latency stats + filtered df
+    #     latency_stats, df_filtered = compute_latency_stats_tuple(merged_csv, LATENCY_COLUMN)
+    #
+    #     # Save plots in the run folder
+    #     plot_latency_stats(
+    #         latency_stats, is_grouped, eps, interval, rows, input_features, output_features,
+    #         online_store, operating_system,
+    #         output_file=os.path.join(run_path, "lat_stats.png")
+    #     )
+    #     plot_latency_over_time(
+    #         df_filtered, is_grouped, eps, interval, rows, input_features, output_features,
+    #         online_store, operating_system,
+    #         output_file=os.path.join(run_path, "lat_over_time.png")
+    #     )
+    #     analyze_thread_stats_vs_latency(
+    #         thread_csv, merged_csv,
+    #         is_grouped, eps, interval, rows, input_features, output_features,
+    #         online_store, operating_system,
+    #         output_prefix=os.path.join(run_path, "lat_vs_rps")
+    #     )
+    #
+    #     print(f"✅ Single plots saved in: {run_path}")
     # plot_throughput_vs_latency_all(benchmarks)
     # plot_latency_distribution_per_benchmark(benchmarks)
     # plot_violin_latency_by_store(benchmarks)
