@@ -1,5 +1,3 @@
-import os
-import shutil
 from datetime import datetime
 from datetime import timedelta
 
@@ -9,9 +7,7 @@ import pandas as pd
 import re
 from datetime import datetime
 
-from multi_benchmark_plotter import parse_benchmark_folder_name
 
-BENCHMARK_ROOT= "C:\\Users\\jofwf\\Desktop\\benchmark-results-glas-eu\\10_06\\10_06\\10_06"
 def parse_spark_ingestor_log(input_filename="logs/spark_log", output_filename="local/parsed_spark_ingestion_log.csv"):
     with open(input_filename, "r") as f:
         spark_log = f.read()
@@ -27,6 +23,7 @@ def parse_spark_ingestor_log(input_filename="logs/spark_log", output_filename="l
         entity_ids_str = match.group(2)
 
         if not entity_ids_str.strip():
+            # Empty list: []
             continue
 
         try:
@@ -87,45 +84,24 @@ def format_duration(ts):
 
 
 def merge_and_compute_latencies(spark_csv_path, kafka_csv_path, output_csv="merged_with_latency.csv"):
-    if not os.path.exists(spark_csv_path):
-        print(f"❌ File not found: {spark_csv_path}")
-        return
-    if not os.path.exists(kafka_csv_path):
-        print(f"❌ File not found: {kafka_csv_path}")
-        return
-
-    try:
-        spark_df = pd.read_csv(spark_csv_path)
-        if spark_df.empty:
-            print(f"⚠️ Empty Spark DataFrame from: {spark_csv_path}")
-            return
-    except Exception as e:
-        print(f"❌ Failed to read Spark CSV: {e}")
-        return
-
-
     # Load CSVs
     spark_df = pd.read_csv(spark_csv_path)
-    try:
-        kafka_df = pd.read_csv(kafka_csv_path, sep=";")
-        if kafka_df.empty:
-            print(f"⚠️ Empty Kafka DataFrame from: {kafka_csv_path}")
-            return
-    except Exception as e:
-        print(f"❌ Failed to read Kafka CSV: {e}")
-        return
+    kafka_df = pd.read_csv(kafka_csv_path, sep=";")
 
-    try:
-        spark_df["entity_id"] = spark_df["entity_id"].astype(int)
-        kafka_df["entity_id"] = kafka_df["entity_id"].astype(int)
+    # Ensure consistent types
+    spark_df["entity_id"] = spark_df["entity_id"].astype(int)
+    kafka_df["entity_id"] = kafka_df["entity_id"].astype(int)
 
-        merged_df = pd.merge(spark_df, kafka_df, on="entity_id", how="inner")
-        if merged_df.empty:
-            print("⚠️ No matching rows found after merge.")
-            return
-
-        for col in ["spark_ingestion_time", "receive_timestamp", "retrieval_timestamp", "produce_timestamp"]:
-            merged_df[col + "_hms"] = merged_df[col].apply(format_timestamp_hms_milliseconds)
+    # Merge on entity_id (inner join to skip mismatches)
+    merged_df = pd.merge(spark_df, kafka_df, on="entity_id", how="inner")
+    # add human hour:minute:second form of timestamps
+    for col in [
+        "spark_ingestion_time",
+        "receive_timestamp",
+        "retrieval_timestamp",
+        "produce_timestamp"
+    ]:
+        merged_df[col + "_hms"] = merged_df[col].apply(format_timestamp_hms_milliseconds)
 
 
         # If spark_ingestion_time < retrieval_timestamp (the normal case), then we take it.
@@ -145,68 +121,27 @@ def merge_and_compute_latencies(spark_csv_path, kafka_csv_path, output_csv="merg
         merged_df["produce_to_receive"] = merged_df["receive_timestamp"] - merged_df["produce_timestamp"]
         merged_df["produce_to_retrieve"] = merged_df["retrieval_timestamp"] - merged_df["produce_timestamp"]
 
-        ordered_columns = (
-            ["entity_id"] +
-            ["preprocess_until_poll", "produce_to_ingest", "produce_to_receive", "produce_to_retrieve"] +
-            ["produce_timestamp_hms", "receive_timestamp_hms", "spark_ingestion_time_hms", "retrieval_timestamp_hms"] +
-            ["produce_timestamp", "receive_timestamp", "spark_ingestion_time", "retrieval_timestamp"]
-        )
-        merged_df = merged_df[ordered_columns]
 
-        for col in merged_df.columns:
-            if merged_df[col].dtype == float:
-                merged_df[col] = merged_df[col].map(lambda x: f"{x:.6f}".replace('.', ','))
+    # Reorder columns
+    ordered_columns = (
+        ["entity_id"] +
+        ["preprocess_until_poll", "produce_to_ingest", "produce_to_receive", "produce_to_retrieve", ] +
+        ["produce_timestamp_hms", "receive_timestamp_hms", "spark_ingestion_time_hms", "retrieval_timestamp_hms"] +
+        ["produce_timestamp", "receive_timestamp", "spark_ingestion_time", "retrieval_timestamp"]
+    )
+    merged_df = merged_df[ordered_columns]
 
-        merged_df.to_csv(output_csv, sep=';', index=False)
-        print(f"✅ Merged data written to {output_csv}")
-    except Exception as e:
-        print(f"❌ Failed during merge or processing: {e}")
+    # Convert all float values from dot to comma format for Excel compatibility
+    for col in merged_df.columns:
+        if merged_df[col].dtype == float:
+            merged_df[col] = merged_df[col].map(lambda x: f"{x:.6f}".replace('.', ','))
 
-
-def recompute_all_merges(root_dir):
-    for folder_name in os.listdir(root_dir):
-        full_path = os.path.join(root_dir, folder_name)
-        if not os.path.isdir(full_path):
-            continue
-
-        # Optional: validate benchmark folder by name
-        if not parse_benchmark_folder_name(folder_name):
-            print(f"⏭️ Skipping non-benchmark folder: {folder_name}")
-            continue
-
-        spark_log = os.path.join(full_path, "spark_log")
-        kafka_log = os.path.join(full_path, "kafka_latency_log.csv")
-        if not os.path.exists(spark_log) or not os.path.exists(kafka_log):
-            print(f"⏭️ Skipping {folder_name}: missing required logs")
-            continue
-
-        print(f"🔄 Recomputing logs for: {folder_name}")
-
-        temp_logs = "logs"
-        temp_local = "local"
-        os.makedirs(temp_logs, exist_ok=True)
-        os.makedirs(temp_local, exist_ok=True)
-
-        shutil.copy(spark_log, os.path.join(temp_logs, "spark_log"))
-        shutil.copy(kafka_log, os.path.join(temp_logs, "kafka_latency_log.csv"))
-
-        try:
-            parse_spark_ingestor_log()
-            merge_and_compute_latencies(
-                os.path.join(temp_local, "parsed_spark_ingestion_log.csv"),
-                os.path.join(temp_logs, "kafka_latency_log.csv"),
-                output_csv=os.path.join(full_path, "merged_log.csv")
-            )
-        except Exception as e:
-            print(f"❌ Failed processing {folder_name}: {e}")
-
-        shutil.rmtree(temp_logs)
-        shutil.rmtree(temp_local)
+    # Save to CSV with semicolon delimiter
+    merged_df.to_csv(output_csv, sep=';', index=False)
 
 if __name__ == "__main__":
-    # consumer_csv_path = "logs/kafka_latency_log.csv"
-    # spark_csv_path = "local/parsed_spark_ingestion_log.csv"
-    # output_path = "local/merged_log.csv"
-    # parse_spark_ingestor_log()
-    # merge_and_compute_latencies(spark_csv_path, consumer_csv_path,output_path)
-    recompute_all_merges(BENCHMARK_ROOT)
+    consumer_csv_path = "logs/kafka_latency_log.csv"
+    spark_csv_path = "local/parsed_spark_ingestion_log.csv"
+    output_path = "local/merged_log.csv"
+    parse_spark_ingestor_log()
+    merge_and_compute_latencies(spark_csv_path, consumer_csv_path,output_path)
