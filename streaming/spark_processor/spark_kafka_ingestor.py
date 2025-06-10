@@ -1,4 +1,5 @@
 import os
+
 import pandas as pd
 from feast import FeatureStore
 from feast.data_source import PushMode
@@ -12,7 +13,7 @@ SPARK_HOME = os.getenv("SPARK_HOME")
 
 
 STREAM_FEATURE_VIEW = os.getenv("FEATURE_VIEW_NAME") # sfv to ingest
-PROCESSING_INTERVAL = int(os.getenv("PROCESSING_INTERVAL")) # int in seconds SparkProcessorConfig.processing_time
+PROCESSING_INTERVAL = int(os.getenv("PROCESSING_INTERVAL")) # int in milliseconds SparkProcessorConfig.processing_time
 
 # @BA document the producer topic initiation requirement
 # second of the minute for producer to start sending. is needed no longer  when we send one meaningless  message to init topic
@@ -46,7 +47,7 @@ ingestion_config = SparkProcessorConfig(
     mode="spark",
     source="kafka",
     spark_session=spark,
-    processing_time=f"{PROCESSING_INTERVAL} seconds",
+    processing_time=f"{PROCESSING_INTERVAL} milliseconds",
     query_timeout=15
 )
 
