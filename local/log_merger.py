@@ -1,4 +1,5 @@
 import os
+import shutil
 from datetime import datetime
 from datetime import timedelta
 
@@ -8,7 +9,9 @@ import pandas as pd
 import re
 from datetime import datetime
 
+from multi_benchmark_plotter import parse_benchmark_folder_name
 
+BENCHMARK_ROOT= "C:\\Users\\jofwf\\Desktop\\benchmark-results-glas-eu\\10_06\\10_06\\10_06"
 def parse_spark_ingestor_log(input_filename="logs/spark_log", output_filename="local/parsed_spark_ingestion_log.csv"):
     with open(input_filename, "r") as f:
         spark_log = f.read()
@@ -159,9 +162,51 @@ def merge_and_compute_latencies(spark_csv_path, kafka_csv_path, output_csv="merg
     except Exception as e:
         print(f"❌ Failed during merge or processing: {e}")
 
+
+def recompute_all_merges(root_dir):
+    for folder_name in os.listdir(root_dir):
+        full_path = os.path.join(root_dir, folder_name)
+        if not os.path.isdir(full_path):
+            continue
+
+        # Optional: validate benchmark folder by name
+        if not parse_benchmark_folder_name(folder_name):
+            print(f"⏭️ Skipping non-benchmark folder: {folder_name}")
+            continue
+
+        spark_log = os.path.join(full_path, "spark_log")
+        kafka_log = os.path.join(full_path, "kafka_latency_log.csv")
+        if not os.path.exists(spark_log) or not os.path.exists(kafka_log):
+            print(f"⏭️ Skipping {folder_name}: missing required logs")
+            continue
+
+        print(f"🔄 Recomputing logs for: {folder_name}")
+
+        temp_logs = "logs"
+        temp_local = "local"
+        os.makedirs(temp_logs, exist_ok=True)
+        os.makedirs(temp_local, exist_ok=True)
+
+        shutil.copy(spark_log, os.path.join(temp_logs, "spark_log"))
+        shutil.copy(kafka_log, os.path.join(temp_logs, "kafka_latency_log.csv"))
+
+        try:
+            parse_spark_ingestor_log()
+            merge_and_compute_latencies(
+                os.path.join(temp_local, "parsed_spark_ingestion_log.csv"),
+                os.path.join(temp_logs, "kafka_latency_log.csv"),
+                output_csv=os.path.join(full_path, "merged_log.csv")
+            )
+        except Exception as e:
+            print(f"❌ Failed processing {folder_name}: {e}")
+
+        shutil.rmtree(temp_logs)
+        shutil.rmtree(temp_local)
+
 if __name__ == "__main__":
-    consumer_csv_path = "logs/kafka_latency_log.csv"
-    spark_csv_path = "local/parsed_spark_ingestion_log.csv"
-    output_path = "local/merged_log.csv"
-    parse_spark_ingestor_log()
-    merge_and_compute_latencies(spark_csv_path, consumer_csv_path,output_path)
+    # consumer_csv_path = "logs/kafka_latency_log.csv"
+    # spark_csv_path = "local/parsed_spark_ingestion_log.csv"
+    # output_path = "local/merged_log.csv"
+    # parse_spark_ingestor_log()
+    # merge_and_compute_latencies(spark_csv_path, consumer_csv_path,output_path)
+    recompute_all_merges(BENCHMARK_ROOT)
