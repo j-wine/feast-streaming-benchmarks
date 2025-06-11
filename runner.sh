@@ -8,9 +8,9 @@ REPO_BASE=feast-streaming-benchmarks
 VENV_PATH=~/feastbench
 DRY_RUN=${DRY_RUN:-false}
 BRANCHES=(
-  automated-postgres
-  automated-bigtable-gcp
   automated-dragonfly
+  automated-bigtable-gcp
+  automated-postgres
   automated-redis
 )
 
