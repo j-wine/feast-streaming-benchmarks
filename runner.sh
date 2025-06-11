@@ -8,7 +8,6 @@ REPO_BASE=feast-streaming-benchmarks
 VENV_PATH=~/feastbench
 DRY_RUN=${DRY_RUN:-false}
 BRANCHES=(
-  automated-mysql
   automated-postgres
   automated-bigtable-gcp
   automated-dragonfly
@@ -19,6 +18,9 @@ BENCHMARK_CONFIGS=(
 
   # Leichte Last (100 EPS)
   "100 100 30000 10"      # Best-Case: geringe Feature-Anzahl, minimalste Latenz
+  "100 250 30000 10"
+  "100 500 30000 10"
+  "100 750 30000 10"
   "100 100 30000 250"     # Feature-Komplexitätsgrenze
   "100 500 30000 250"     # Feature-Grenze + hoher processing_time
 
@@ -40,7 +42,7 @@ BENCHMARK_CONFIGS=(
   "2000 2000 600000 250"  # maximal belastet
 
   # Referenzpunkt für Vergleichbarkeit
-  "1000 500 300000 50"    # bereits bekannter Lauf, Vergleich zu Altläufen
+  "1000 1000 300000 50"    # bereits bekannter Lauf, Vergleich zu Altläufen
 
   # Stresstest (kurzes Intervall, hohe Last)
   "1000 200 300000 50"    # Tests Mini-Batch-Stau/Feast-Bottlenecks gezielt
@@ -63,7 +65,7 @@ wait_until_second() {
 echo "[1] Activating Python virtualenv..."
 source "$VENV_PATH/bin/activate"
 
-mkdir -p "$RESULTS_ROOT"
+mkdir -p "$RESULTS_ROOT" || true
 
 for BRANCH in "${BRANCHES[@]}"; do
   REPO_DIR="${REPO_BASE}-${BRANCH}"
@@ -118,13 +120,21 @@ EOF
         docker compose up -d redis
         ;;
       postgres)
+        echo "[preclean] Deleting PostgreSQL bind mount..."
+        rm -rf ./feast-postgres-online
+        mkdir -p ./feast-postgres-online || true
         docker compose up -d postgres_online
         ;;
       mysql)
+        echo "[preclean] Deleting MySQL bind mount..."
+        rm -rf ./mysql_data
+        mkdir -p ./mysql_data || true
         docker compose up -d mysql
         ;;
       bigtable)
         echo "ℹ️ Skipping online store container for Bigtable (external service)"
+        echo "[preclean]Deleting Bigtable table: feast_demo_local.benchmark_entity"
+        gcloud bigtable tables delete feast_demo_local.benchmark_entity --instance=feastbigtable --quiet
         ;;
       *)
         echo "❌ Unknown ONLINE_STORE: $ONLINE_STORE"
@@ -146,13 +156,14 @@ EOF
 
     timestamp=$(date +%Y%m%d_%H%M%S)
     results_dir="$RESULTS_ROOT/${ONLINE_STORE}_${EPS}eps_${INTERVAL}s_${ROWS}rows_${FEATURES}f_$timestamp"
-    mkdir -p "$results_dir"
+    mkdir -p "$results_dir" || true
     cp logs/* "$results_dir/" || true
 #    cp local/merged_log.csv "$results_dir/" || true
 #    cp plots/* "$results_dir/" 2>/dev/null || true
 
     rm -f logs/*
     docker compose down --volumes
+    docker volume prune  -f
     echo "✅ Finished run: $results_dir"
     echo "------------------------------------------------------------"
   done
