@@ -164,6 +164,7 @@ EOF
 
     rm -f logs/*
     docker compose down --volumes
+    docker container prune -f
     docker volume prune  -f
     docker network prune -f
     if [[ "$BRANCH" == *"bigtable"* ]]; then
