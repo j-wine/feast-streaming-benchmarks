@@ -68,6 +68,11 @@ for BRANCH in "${BRANCHES[@]}"; do
   REPO_DIR="${REPO_BASE}-${BRANCH}"
   echo "📦 Entering branch: $BRANCH"
   cd ~/"$REPO_DIR"
+  # Safely shut down containers and clean up volumes/networks
+  docker compose down --volumes --remove-orphans || true
+  # Global cleanup (should be outside specific Compose context)
+  docker container prune -f
+  docker network prune -f
 
   set -o allexport
   source .env
