@@ -164,6 +164,10 @@ EOF
     rm -f logs/*
     docker compose down --volumes
     docker volume prune  -f
+    docker network prune -f
+    if [[ "$BRANCH" == *"bigtable"* ]]; then
+      gcloud bigtable tables delete feast_demo_local.benchmark_entity --instance=feastbigtable --quiet || echo "[warn] Bigtable table not found or already deleted. Skipping."
+    fi
     echo "✅ Finished run: $results_dir"
     echo "------------------------------------------------------------"
   done
