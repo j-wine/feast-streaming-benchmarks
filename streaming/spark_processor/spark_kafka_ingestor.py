@@ -27,6 +27,8 @@ spark = SparkSession.builder \
     .appName("KafkaTrafficLightProcessor") \
     .config("spark.sql.shuffle.partitions", 5) \
     .config("spark.sql.execution.arrow.pyspark.enabled", "true") \
+    .config("spark.driver.memory", "4g") \
+    .config("spark.executor.memory", "4g") \
     .getOrCreate()
 
 # Verify Spark setup
