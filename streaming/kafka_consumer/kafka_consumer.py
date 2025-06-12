@@ -51,7 +51,7 @@ def track_request(timestamp):
 def schedule_polling(entities, receive_times, produce_times, timeout_factor = 20):
     try:
         start_time = time.time()
-        timeout = PROCESSING_INTERVAL * timeout_factor
+        timeout = (PROCESSING_INTERVAL * timeout_factor) / 1000 # convert to seconds
         """Poll a group of entities and log each result individually into result_queue."""
         # print("schedule_polling")
 
