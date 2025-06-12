@@ -9,10 +9,7 @@ VENV_PATH=~/feastbench
 DRY_RUN=${DRY_RUN:-false}
 BRANCHES=(
   automated-dragonfly
-  automated-bigtable-gcp
-  automated-postgres
-  automated-redis
-)
+  )
 
 BENCHMARK_CONFIGS=(
 
@@ -121,20 +118,19 @@ EOF
         ;;
       postgres)
         echo "[preclean] Deleting PostgreSQL bind mount..."
-        rm -rf ./feast-postgres-online
+        sudo find ./feast-postgres-online -mindepth 1 -delete || true
         mkdir -p ./feast-postgres-online || true
         docker compose up -d postgres_online
         ;;
       mysql)
         echo "[preclean] Deleting MySQL bind mount..."
-        rm -rf ./mysql_data
+        sudo find ./mysql_data -mindepth 1 -delete || true
         mkdir -p ./mysql_data || true
         docker compose up -d mysql
         ;;
       bigtable)
         echo "ℹ️ Skipping online store container for Bigtable (external service)"
         echo "[preclean]Deleting Bigtable table: feast_demo_local.benchmark_entity"
-        gcloud bigtable tables delete feast_demo_local.benchmark_entity --instance=feastbigtable --quiet
         ;;
       *)
         echo "❌ Unknown ONLINE_STORE: $ONLINE_STORE"
