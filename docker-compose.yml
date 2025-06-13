@@ -115,6 +115,8 @@ services:
         soft: -1
         hard: -1
     restart: unless-stopped
+    mem_limit: 12g
+    command: ["--maxmemory", "10g", "--io-threads", "4"]
 
   zookeeper:
     image: confluentinc/cp-zookeeper:7.0.1
