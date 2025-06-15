@@ -152,14 +152,14 @@ EOF
 
     docker logs spark_ingestor >> logs/spark_log
 #    mkdir -p local/plots
-#    python local/log_merger.py
+    python local/log_merger.py
 #    python local/plotting.py
 
     timestamp=$(date +%Y%m%d_%H%M%S)
     results_dir="$RESULTS_ROOT/${ONLINE_STORE}_${EPS}eps_${INTERVAL}s_${ROWS}rows_${FEATURES}f_$timestamp"
     mkdir -p "$results_dir" || true
     cp logs/* "$results_dir/" || true
-#    cp local/merged_log.csv "$results_dir/" || true
+    cp local/merged_log.csv "$results_dir/" || true
 #    cp plots/* "$results_dir/" 2>/dev/null || true
 
     rm -f logs/*
