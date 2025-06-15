@@ -44,19 +44,6 @@ The following online store types are supported and benchmarked:
 - Dragonfly
 - PostgreSQL
 - BigTable
-- ⚠️ Snowflake (not functional as Tables aren't filled correctly, although query history shows correct transactions)
-- ⚠️ Cassandra (not functional due to integration issues)
-- ⚠️ SQLite (not suitable for concurrent workloads)
-
-## Metrics & Output
-
-Each benchmark run outputs a CSV file with per-request metrics including:
-
-- `get_time` — duration of a Feast `get_online_features()` call.
-- `preprocess_until_poll` — time from Spark→Feast ingestion to successful polling.
-- Additional timing breakdowns for debugging and validation.
-
-Graphs are generated and stored under `local/plots/`.
 
 ## System Requirements
 
@@ -71,3 +58,7 @@ Set your parameters in a bash script or `.env` file and launch:
 
 ```bash
 docker-compose up --build
+
+## Running the automated Benchmark
+Use a fresh Debian 12 VM and execute scripts setup1.sh, setup2.sh for setup. Setup 2 pulls the latest version of the branches for all benchmarked online stores.
+Then adjust the benchmark configs in scrip runner.sh or execute it as is. The 
