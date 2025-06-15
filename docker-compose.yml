@@ -14,6 +14,10 @@ services:
       - "6566:6566"
     links:
       - registry
+    healthcheck:
+      test: "${DOCKER_HEALTHCHECK_TEST:-curl localhost:6566/health}"
+      interval: "5s"
+      retries: 5
     restart: unless-stopped
 
   kafka_consumer:
@@ -27,7 +31,7 @@ services:
       broker-1:
         condition: service_healthy
       feature_server:
-        condition: service_started
+        condition: service_healthy
       kafka_producer:
         condition: service_started
     environment:
@@ -54,7 +58,7 @@ services:
       broker-1:
         condition: service_started
       feature_server:
-        condition: service_started
+        condition: service_healthy
       kafka_producer:
         condition: service_started
     restart: unless-stopped
@@ -68,7 +72,7 @@ services:
       broker-1:
         condition: service_healthy
       feature_server:
-        condition: service_started
+        condition: service_healthy
     environment:
       - KAFKA_BROKER=broker:9092
       - FEATURES=${FEATURES}
