@@ -1,3 +1,2 @@
-/feature_repo/data/traffic_light_data.parquet
-/feature_repo/offline_data/traffic_light_data.parquet
-Dev Notes.md
+/feature_repo/data/*
+/feature_repo/offline_data/*

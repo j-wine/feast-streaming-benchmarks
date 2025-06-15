@@ -52,6 +52,8 @@ The following online store types are supported and benchmarked:
 - see requiremens.txt
 
 ## Running the Benchmark
+Create the local .parquet file by running `generate_parquet_files.py`, with the parameters for rows and features fitted to the benchmark cases.
+A base benchmark config is defined per branch in `.env`.
 
 Set your parameters in a bash script or `.env` file and launch:
 
