@@ -24,7 +24,7 @@ os.environ["PYSPARK_SUBMIT_ARGS"] = "--packages org.apache.spark:spark-sql-kafka
 
 # Initialize Spark Session
 spark = SparkSession.builder \
-    .appName("KafkaTrafficLightProcessor") \
+    .appName("KafkaSFVProcessor") \
     .config("spark.sql.shuffle.partitions", 5) \
     .config("spark.sql.execution.arrow.pyspark.enabled", "true") \
     .config("spark.driver.memory", "4g") \
@@ -54,13 +54,13 @@ ingestion_config = SparkProcessorConfig(
 )
 
 # Fetch stream feature view
-traffic_light_windowed_features = store.get_stream_feature_view(STREAM_FEATURE_VIEW)
+benchmark_feature_view = store.get_stream_feature_view(STREAM_FEATURE_VIEW)
 
 # Initialize stream processor
 processor = get_stream_processor_object(
     config=ingestion_config,
     fs=store,
-    sfv=traffic_light_windowed_features,
+    sfv=benchmark_feature_view,
     preprocess_fn=preprocess_fn
 )
 query = processor.ingest_stream_feature_view(to=PushMode.ONLINE)
